@@ -7,9 +7,7 @@ import (
 	"net/http"
 )
 
-const (
-	restEmail = "service/rest/v1/email"
-)
+const restEmail = "service/rest/v1/email"
 
 type EmailConfig struct {
 	Enabled                       bool   `json:"enabled"`
@@ -45,11 +43,11 @@ func GetEmailConfig(rm RM) (EmailConfig, error) {
 
 	body, resp, err := rm.Get(restEmail)
 	if err != nil && resp.StatusCode != http.StatusNoContent {
-		return EmailConfig{}, fmt.Errorf("email config not set: %v", err)
+		return EmailConfig{}, fmt.Errorf("email config can't getting: %v", err)
 	}
 
 	if err := json.Unmarshal(body, &config); err != nil {
-		return config, fmt.Errorf("email config not set: %v", err)
+		return EmailConfig{}, fmt.Errorf("email config can't getting: %v", err)
 	}
 
 	return config, nil
