@@ -39,3 +39,27 @@ func SetEmailConfig(rm RM, config EmailConfig) error {
 
 	return nil
 }
+
+func GetEmailConfig(rm RM) (EmailConfig, error) {
+	var config EmailConfig
+
+	body, resp, err := rm.Get(restEmail)
+	if err != nil && resp.StatusCode != http.StatusNoContent {
+		return EmailConfig{}, fmt.Errorf("email config not set: %v", err)
+	}
+
+	if err := json.Unmarshal(body, &config); err != nil {
+		return config, fmt.Errorf("email config not set: %v", err)
+	}
+
+	return config, nil
+}
+
+func DeleteEmailConfig(rm RM) error {
+
+	if resp, err := rm.Del(restEmail); err != nil && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("email config not deleted: %v", err)
+	}
+
+	return nil
+}
