@@ -1,7 +1,6 @@
 package nexusrm
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -369,18 +368,19 @@ func UploadComponent(rm RM, repo string, component UploadComponentWriter) error 
 		return fmt.Errorf("component not uploaded: %v", err)
 	}
 
-	var b bytes.Buffer
-	w := multipart.NewWriter(&b)
+	b, w := io.Pipe()
+	m := multipart.NewWriter(w)
 
-	component.write(w)
+	go func() {
+		defer w.Close()
+		defer m.Close()
 
-	if err := w.Close(); err != nil {
-		return doError(err)
-	}
+		component.write(m)
+	}()
 
 	url := fmt.Sprintf(restListComponentsByRepo, repo)
-	req, err := rm.NewRequest("POST", url, &b)
-	req.Header.Set("Content-Type", w.FormDataContentType())
+	req, err := rm.NewRequest("POST", url, b)
+	req.Header.Set("Content-Type", m.FormDataContentType())
 	if err != nil {
 		return doError(err)
 	}
