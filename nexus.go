@@ -61,7 +61,7 @@ func (s *DefaultClient) Do(request *http.Request) (body []byte, resp *http.Respo
 		log.Printf("%q\n", dump)
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := &http.Client{Timeout: 3600 * time.Second}
 
 	if s.CertFile != "" {
 		rootCAs, err := x509.SystemCertPool()
