@@ -6,7 +6,40 @@ import (
 	"net/http"
 )
 
-const restRepositories = "service/rest/v1/repositories"
+const (
+	restRepositories               = "service/rest/v1/repositories"
+	restRepositoriesHostedApt      = "service/rest/v1/repositories/apt/hosted"
+	restRepositoriesHostedBower    = "service/rest/v1/repositories/bower/hosted"
+	restRepositoriesHostedDocker   = "service/rest/v1/repositories/docker/hosted"
+	restRepositoriesHostedGitLfs   = "service/rest/v1/repositories/gitlfs/hosted"
+	restRepositoriesHostedHelm     = "service/rest/v1/repositories/helm/hosted"
+	restRepositoriesHostedMaven    = "service/rest/v1/repositories/maven/hosted"
+	restRepositoriesHostedNpm      = "service/rest/v1/repositories/npm/hosted"
+	restRepositoriesHostedNuget    = "service/rest/v1/repositories/nuget/hosted"
+	restRepositoriesHostedPypi     = "service/rest/v1/repositories/pypi/hosted"
+	restRepositoriesHostedR        = "service/rest/v1/repositories/r/hosted"
+	restRepositoriesHostedRaw      = "service/rest/v1/repositories/raw/hosted"
+	restRepositoriesHostedRubygems = "service/rest/v1/repositories/rubygems/hosted"
+	restRepositoriesHostedYum      = "service/rest/v1/repositories/yum/hosted"
+
+	restRepositoriesProxyApt       = "service/rest/v1/repositories/apt/proxy"
+	restRepositoriesProxyBower     = "service/rest/v1/repositories/bower/proxy"
+	restRepositoriesProxyCocoapods = "service/rest/v1/repositories/cocoapods/proxy"
+	restRepositoriesProxyConan     = "service/rest/v1/repositories/conan/proxy"
+	restRepositoriesProxyConda     = "service/rest/v1/repositories/conda/proxy"
+	restRepositoriesProxyDocker    = "service/rest/v1/repositories/docker/proxy"
+	restRepositoriesProxyGolang    = "service/rest/v1/repositories/go/proxy"
+	restRepositoriesProxyHelm      = "service/rest/v1/repositories/helm/proxy"
+	restRepositoriesProxyMaven     = "service/rest/v1/repositories/maven/proxy"
+	restRepositoriesProxyNpm       = "service/rest/v1/repositories/npm/proxy"
+	restRepositoriesProxyNuget     = "service/rest/v1/repositories/nuget/proxy"
+	restRepositoriesProxyP2        = "service/rest/v1/repositories/p2/proxy"
+	restRepositoriesProxyPypi      = "service/rest/v1/repositories/pypi/proxy"
+	restRepositoriesProxyR         = "service/rest/v1/repositories/r/proxy"
+	restRepositoriesProxyRaw       = "service/rest/v1/repositories/raw/proxy"
+	restRepositoriesProxyRubygems  = "service/rest/v1/repositories/rubygems/proxy"
+	restRepositoriesProxyYum       = "service/rest/v1/repositories/yum/proxy"
+)
 
 /*
 // RepositoryType enumerates the types of repositories in RM
@@ -41,8 +74,20 @@ const (
 	Npm
 	Nuget
 	Apt
+	Bower
+	Cocoapods
+	Conan
+	Conda
 	Docker
+	GitLfs
 	Golang
+	Helm
+	Maven
+	Npm
+	Nuget
+	P2
+	Pypi
+	R
 	Raw
 	Rubygems
 	Bower
