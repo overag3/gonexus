@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -70,9 +71,6 @@ type repositoryFormat int
 // Enumerates the formats which can be created as Repository Manager repositories
 const (
 	Unknown repositoryFormat = iota
-	Maven
-	Npm
-	Nuget
 	Apt
 	Bower
 	Cocoapods
@@ -90,10 +88,7 @@ const (
 	R
 	Raw
 	Rubygems
-	Bower
-	Pypi
 	Yum
-	GitLfs
 )
 
 // Repository collects the information returned by RM about a repository
@@ -107,6 +102,167 @@ type Repository struct {
 			RemoteURL string `json:"remoteUrl"`
 		} `json:"proxy"`
 	} `json:"attributes,omitempty"`
+}
+
+type AttributesStorageHosted struct {
+	BlobStoreName               string `json:"blobStoreName"`
+	StrictContentTypeValidation bool   `json:"strictContentTypeValidation"`
+	WritePolicy                 string `json:"writePolicy"`
+}
+type AttributesStorage struct {
+	BlobStoreName               string `json:"blobStoreName"`
+	StrictContentTypeValidation bool   `json:"strictContentTypeValidation"`
+}
+
+type AttributesCleanupPolicy struct {
+	PolicyNames []string `json:"policyNames"`
+}
+
+type AttributesRepositoriesAptHosted struct {
+	Distribution string `json:"distribution"`
+}
+
+type AttributesRepositoriesAptSigning struct {
+	Keypair    string `json:"keypair"`
+	Passphrase string `json:"passphrase"`
+}
+
+type AttributesComponent struct {
+	ProprietaryComponents bool `json:"proprietaryComponents"`
+}
+
+type AttributesRaw struct {
+	ContentDisposition string `json:"contentDisposition"`
+}
+
+type RepositoryNugetHosted struct {
+	Name      string                  `json:"name"`
+	Online    bool                    `json:"online"`
+	Storage   AttributesStorageHosted `json:"storage"`
+	Cleanup   AttributesCleanupPolicy `json:"cleanup"`
+	Component AttributesComponent     `json:"component"`
+}
+
+type RepositoryAptHosted struct {
+	Name       string                           `json:"name"`
+	Online     bool                             `json:"online"`
+	Storage    AttributesStorageHosted          `json:"storage"`
+	Cleanup    AttributesCleanupPolicy          `json:"cleanup"`
+	Component  AttributesComponent              `json:"component"`
+	Apt        AttributesRepositoriesAptHosted  `json:"apt"`
+	AptSigning AttributesRepositoriesAptSigning `json:"aptSigning"`
+}
+
+type RepositoryRawHosted struct {
+	Name    string                  `json:"name"`
+	Online  bool                    `json:"online"`
+	Storage AttributesStorageHosted `json:"storage"`
+	Cleanup AttributesCleanupPolicy `json:"cleanup"`
+	Raw     AttributesRaw           `json:"raw"`
+}
+
+func CreateRepositoryHosted(rm RM, format repositoryFormat, r interface{}) error {
+	buf, err := json.Marshal(r)
+	if err != nil {
+		return fmt.Errorf("could not marshal: %v", err)
+	}
+
+	var restEndpointRepository string
+	switch format {
+	case Apt:
+		restEndpointRepository = restRepositoriesHostedApt
+	case Bower:
+		restEndpointRepository = restRepositoriesHostedBower
+	case Docker:
+		restEndpointRepository = restRepositoriesHostedDocker
+	case GitLfs:
+		restEndpointRepository = restRepositoriesHostedGitLfs
+	case Helm:
+		restEndpointRepository = restRepositoriesHostedHelm
+	case Maven:
+		restEndpointRepository = restRepositoriesHostedMaven
+	case Npm:
+		restEndpointRepository = restRepositoriesHostedNpm
+	case Nuget:
+		restEndpointRepository = restRepositoriesHostedNuget
+	case Pypi:
+		restEndpointRepository = restRepositoriesHostedPypi
+	case R:
+		restEndpointRepository = restRepositoriesHostedR
+	case Raw:
+		restEndpointRepository = restRepositoriesHostedRaw
+	case Rubygems:
+		restEndpointRepository = restRepositoriesHostedRubygems
+	case Yum:
+		restEndpointRepository = restRepositoriesHostedYum
+	}
+	_, resp, err := rm.Post(restEndpointRepository, bytes.NewBuffer(buf))
+	if err != nil && resp == nil {
+		return fmt.Errorf("could not create repository: %v", err)
+	}
+
+	return nil
+}
+
+func CreateRepositoryProxy(rm RM, format repositoryFormat, r interface{}) error {
+	buf, err := json.Marshal(r)
+	if err != nil {
+		return fmt.Errorf("could not marshal: %v", err)
+	}
+
+	var restEndpointRepository string
+	switch format {
+	case Apt:
+		restEndpointRepository = restRepositoriesProxyApt
+	case Bower:
+		restEndpointRepository = restRepositoriesProxyBower
+	case Cocoapods:
+		restEndpointRepository = restRepositoriesProxyCocoapods
+	case Conan:
+		restEndpointRepository = restRepositoriesProxyConan
+	case Conda:
+		restEndpointRepository = restRepositoriesProxyConda
+	case Docker:
+		restEndpointRepository = restRepositoriesProxyDocker
+	case Golang:
+		restEndpointRepository = restRepositoriesProxyGolang
+	case Helm:
+		restEndpointRepository = restRepositoriesProxyHelm
+	case Maven:
+		restEndpointRepository = restRepositoriesProxyMaven
+	case Npm:
+		restEndpointRepository = restRepositoriesProxyNpm
+	case Nuget:
+		restEndpointRepository = restRepositoriesProxyNuget
+	case P2:
+		restEndpointRepository = restRepositoriesProxyP2
+	case Pypi:
+		restEndpointRepository = restRepositoriesProxyPypi
+	case R:
+		restEndpointRepository = restRepositoriesProxyR
+	case Raw:
+		restEndpointRepository = restRepositoriesProxyRaw
+	case Rubygems:
+		restEndpointRepository = restRepositoriesProxyRubygems
+	case Yum:
+		restEndpointRepository = restRepositoriesProxyYum
+	}
+	_, resp, err := rm.Post(restEndpointRepository, bytes.NewBuffer(buf))
+	if err != nil && resp == nil {
+		return fmt.Errorf("could not create repository: %v", err)
+	}
+
+	return nil
+}
+
+func DeleteRepositoryByName(rm RM, name string) error {
+	url := fmt.Sprintf("%s/%s", restRepositories, name)
+
+	if resp, err := rm.Del(url); err != nil && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("repository not deleted '%s': %v", name, err)
+	}
+
+	return nil
 }
 
 // GetRepositories returns a list of components in the indicated repository
