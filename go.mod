@@ -1,3 +1,3 @@
-module github.com/sonatype-nexus-community/gonexus
+module github.com/overag3/gonexus
 
-go 1.12
+go 1.16
