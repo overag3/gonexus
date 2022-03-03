@@ -6,7 +6,7 @@ Provides a go client library for connecting to, and interacting with, [Sonatype]
 
 The library is broken into two packages. One for each application.
 
-### nexusrm [![GoDoc](http://godoc.org/github.com/sonatype-nexus-community/gonexus/rm?status.png)](http://godoc.org/github.com/sonatype-nexus-community/gonexus/rm) [![nexusrm coverage](https://gocover.io/_badge/github.com/sonatype-nexus-community/gonexus/rm?0 "nexusrm coverage")](http://gocover.io/github.com/sonatype-nexus-community/gonexus/rm)
+### nexusrm
 
 Create a connection to an instance of Nexus Repository Manager
 
@@ -55,7 +55,7 @@ if err != nil {
 
 _Legend_: :full_moon: complete :new_moon: untouched :waning_crescent_moon::last_quarter_moon::waning_gibbous_moon: partial support
 
-### nexusiq [![GoDoc](http://godoc.org/github.com/sonatype-nexus-community/gonexus/iq?status.png)](http://godoc.org/github.com/sonatype-nexus-community/gonexus/iq) [![nexusiq coverage](https://gocover.io/_badge/github.com/sonatype-nexus-community/gonexus/iq?0 "nexusiq coverage")](http://gocover.io/github.com/sonatype-nexus-community/gonexus/iq)
+### nexusiq
 
 Create a connection to an instance of Nexus IQ Server
 
@@ -99,7 +99,7 @@ if err != nil {
 
 _Legend_: :full_moon: complete :new_moon: untouched :waning_crescent_moon::last_quarter_moon::waning_gibbous_moon: partial support
 
-##### iqwebhooks [![GoDoc](http://godoc.org/github.com/sonatype-nexus-community/gonexus/iq/iqwebhooks?status.png)](http://godoc.org/github.com/sonatype-nexus-community/gonexus/iq/iqwebhooks) [![nexusiq webhooks coverage](https://gocover.io/_badge/github.com/sonatype-nexus-community/gonexus/iq/iqwebhooks/?0 "nexusiq webhooks coverage")](http://gocover.io/github.com/sonatype-nexus-community/gonexus/iq/iqwebhooks)
+##### iqwebhooks
 
 The `iq/iqwebhooks` subpackage provides structs for all of the event types along with helper functions.
 
