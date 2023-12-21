@@ -2,6 +2,7 @@ package nexusrm
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"text/template"
 )
@@ -71,8 +72,7 @@ type repositoryGroup struct {
 	Members         []string
 }
 
-// CreateHostedRepository creates a hosted repository of the indicated format
-func CreateHostedRepository(rm RM, format repositoryFormat, config repositoryHosted) error {
+func CreateHostedRepositoryContext(ctx context.Context, rm RM, format repositoryFormat, config repositoryHosted) error {
 	var groovyTmpl string
 	switch format {
 	case Maven:
@@ -112,12 +112,16 @@ func CreateHostedRepository(rm RM, format repositoryFormat, config repositoryHos
 		return fmt.Errorf("could not create hosted repository from template: %v", err)
 	}
 
-	_, err = ScriptRunOnce(rm, newAnonGroovyScript(buf.String()), nil)
+	_, err = ScriptRunOnceContext(ctx, rm, newAnonGroovyScript(buf.String()), nil)
 	return fmt.Errorf("could not create hosted repository: %v", err)
 }
 
-// CreateProxyRepository creates a proxy repository of the indicated format
-func CreateProxyRepository(rm RM, format repositoryFormat, config repositoryProxy) error {
+// CreateHostedRepository creates a hosted repository of the indicated format
+func CreateHostedRepository(rm RM, format repositoryFormat, config repositoryHosted) error {
+	return CreateHostedRepositoryContext(context.Background(), rm, format, config)
+}
+
+func CreateProxyRepositoryContext(ctx context.Context, rm RM, format repositoryFormat, config repositoryProxy) error {
 	var groovyTmpl string
 	switch format {
 	case Maven:
@@ -157,12 +161,16 @@ func CreateProxyRepository(rm RM, format repositoryFormat, config repositoryProx
 		return fmt.Errorf("could not create proxy repository from template: %v", err)
 	}
 
-	_, err = ScriptRunOnce(rm, newAnonGroovyScript(buf.String()), nil)
+	_, err = ScriptRunOnceContext(ctx, rm, newAnonGroovyScript(buf.String()), nil)
 	return fmt.Errorf("could not create proxy repository: %v", err)
 }
 
-// CreateGroupRepository creates a group repository of the indicated format
-func CreateGroupRepository(rm RM, format repositoryFormat, config repositoryGroup) error {
+// CreateProxyRepository creates a proxy repository of the indicated format
+func CreateProxyRepository(rm RM, format repositoryFormat, config repositoryProxy) error {
+	return CreateProxyRepositoryContext(context.Background(), rm, format, config)
+}
+
+func CreateGroupRepositoryContext(ctx context.Context, rm RM, format repositoryFormat, config repositoryGroup) error {
 	var groovyTmpl string
 	switch format {
 	case Maven:
@@ -202,6 +210,11 @@ func CreateGroupRepository(rm RM, format repositoryFormat, config repositoryGrou
 		return fmt.Errorf("could not create group repository from template: %v", err)
 	}
 
-	_, err = ScriptRunOnce(rm, newAnonGroovyScript(buf.String()), nil)
+	_, err = ScriptRunOnceContext(ctx, rm, newAnonGroovyScript(buf.String()), nil)
 	return fmt.Errorf("could not create group repository: %v", err)
+}
+
+// CreateGroupRepository creates a group repository of the indicated format
+func CreateGroupRepository(rm RM, format repositoryFormat, config repositoryGroup) error {
+	return CreateGroupRepositoryContext(context.Background(), rm, format, config)
 }

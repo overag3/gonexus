@@ -2,6 +2,7 @@ package nexusiq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -60,13 +61,13 @@ func createRemediationEndpoint(base, id, stage string) string {
 	return buf.String()
 }
 
-func getRemediation(iq IQ, component Component, endpoint string) (Remediation, error) {
+func getRemediation(ctx context.Context, iq IQ, component Component, endpoint string) (Remediation, error) {
 	request, err := json.Marshal(component)
 	if err != nil {
 		return Remediation{}, fmt.Errorf("could not build the request: %v", err)
 	}
 
-	body, _, err := iq.Post(endpoint, bytes.NewBuffer(request))
+	body, _, err := iq.Post(ctx, endpoint, bytes.NewBuffer(request))
 	if err != nil {
 		return Remediation{}, fmt.Errorf("could not get remediation: %v", err)
 	}
@@ -80,40 +81,47 @@ func getRemediation(iq IQ, component Component, endpoint string) (Remediation, e
 	return results.Remediation, nil
 }
 
-func getRemediationByAppInternalID(iq IQ, component Component, stage, appInternalID string) (Remediation, error) {
-	return getRemediation(iq, component, createRemediationEndpoint(restRemediationByApp, appInternalID, stage))
+func getRemediationByAppInternalID(ctx context.Context, iq IQ, component Component, stage, appInternalID string) (Remediation, error) {
+	return getRemediation(ctx, iq, component, createRemediationEndpoint(restRemediationByApp, appInternalID, stage))
 }
 
-// GetRemediationByApp retrieves the remediation information on a component based on an application's policies
-func GetRemediationByApp(iq IQ, component Component, stage, applicationID string) (Remediation, error) {
-	app, err := GetApplicationByPublicID(iq, applicationID)
+func GetRemediationByAppContext(ctx context.Context, iq IQ, component Component, stage, applicationID string) (Remediation, error) {
+	app, err := GetApplicationByPublicIDContext(ctx, iq, applicationID)
 	if err != nil {
 		return Remediation{}, fmt.Errorf("could not get application: %v", err)
 	}
 
-	return getRemediationByAppInternalID(iq, component, stage, app.ID)
+	return getRemediationByAppInternalID(ctx, iq, component, stage, app.ID)
 }
 
-// GetRemediationByOrg retrieves the remediation information on a component based on an organization's policies
-func GetRemediationByOrg(iq IQ, component Component, stage, organizationName string) (Remediation, error) {
-	org, err := GetOrganizationByName(iq, organizationName)
+// GetRemediationByApp retrieves the remediation information on a component based on an application's policies
+func GetRemediationByApp(iq IQ, component Component, stage, applicationID string) (Remediation, error) {
+	return GetRemediationByAppContext(context.Background(), iq, component, stage, applicationID)
+}
+
+func GetRemediationByOrgContext(ctx context.Context, iq IQ, component Component, stage, organizationName string) (Remediation, error) {
+	org, err := GetOrganizationByNameContext(ctx, iq, organizationName)
 	if err != nil {
 		return Remediation{}, fmt.Errorf("could not get organization: %v", err)
 	}
 
 	endpoint := createRemediationEndpoint(restRemediationByOrg, org.ID, stage)
 
-	return getRemediation(iq, component, endpoint)
+	return getRemediation(ctx, iq, component, endpoint)
 }
 
-// GetRemediationsByAppReport retrieves the remediation information on each component of a report
-func GetRemediationsByAppReport(iq IQ, applicationID, reportID string) (remediations []Remediation, err error) {
-	report, err := getRawReportByAppReportID(iq, applicationID, reportID)
+// GetRemediationByOrg retrieves the remediation information on a component based on an organization's policies
+func GetRemediationByOrg(iq IQ, component Component, stage, organizationName string) (Remediation, error) {
+	return GetRemediationByOrgContext(context.Background(), iq, component, stage, organizationName)
+}
+
+func GetRemediationsByAppReportContext(ctx context.Context, iq IQ, applicationID, reportID string) (remediations []Remediation, err error) {
+	report, err := getRawReportByAppReportID(ctx, iq, applicationID, reportID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get report %s for app %s: %v", reportID, applicationID, err)
 	}
 
-	app, err := GetApplicationByPublicID(iq, applicationID)
+	app, err := GetApplicationByPublicIDContext(ctx, iq, applicationID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get application: %v", err)
 	}
@@ -131,7 +139,7 @@ func GetRemediationsByAppReport(iq IQ, applicationID, reportID string) (remediat
 					PackageURL: c.PackageURL,
 				}
 				var remediation Remediation
-				remediation, err = getRemediationByAppInternalID(iq, purl, report.ReportInfo.Stage, app.ID)
+				remediation, err = getRemediationByAppInternalID(ctx, iq, purl, report.ReportInfo.Stage, app.ID)
 				if err != nil {
 					err = fmt.Errorf("did not find remediation for '%v': %v", c, err)
 					break
@@ -156,4 +164,9 @@ func GetRemediationsByAppReport(iq IQ, applicationID, reportID string) (remediat
 	wg.Wait()
 
 	return
+}
+
+// GetRemediationsByAppReport retrieves the remediation information on each component of a report
+func GetRemediationsByAppReport(iq IQ, applicationID, reportID string) (remediations []Remediation, err error) {
+	return GetRemediationsByAppReportContext(context.Background(), iq, applicationID, reportID)
 }

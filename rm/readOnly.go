@@ -2,6 +2,7 @@ package nexusrm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -39,9 +40,8 @@ func (s ReadOnlyState) String() string {
 	return buf.String()
 }
 
-// GetReadOnlyState returns the read-only state of the RM instance
-func GetReadOnlyState(rm RM) (state ReadOnlyState, err error) {
-	body, resp, err := rm.Get(restReadOnly)
+func GetReadOnlyStateContext(ctx context.Context, rm RM) (state ReadOnlyState, err error) {
+	body, resp, err := rm.Get(ctx, restReadOnly)
 	if err != nil {
 		return state, fmt.Errorf("could not get read-only state: %v", err)
 	}
@@ -55,9 +55,34 @@ func GetReadOnlyState(rm RM) (state ReadOnlyState, err error) {
 	return
 }
 
+// GetReadOnlyState returns the read-only state of the RM instance
+func GetReadOnlyState(rm RM) (state ReadOnlyState, err error) {
+	return GetReadOnlyStateContext(context.Background(), rm)
+}
+
+func ReadOnlyEnableContext(ctx context.Context, rm RM) (state ReadOnlyState, err error) {
+	body, resp, err := rm.Post(ctx, restReadOnlyFreeze, nil)
+	if err != nil && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
+		return
+	}
+
+	err = json.Unmarshal(body, &state)
+
+	return
+}
+
 // ReadOnlyEnable enables read-only mode for the RM instance
 func ReadOnlyEnable(rm RM) (state ReadOnlyState, err error) {
-	body, resp, err := rm.Post(restReadOnlyFreeze, nil)
+	return ReadOnlyEnableContext(context.Background(), rm)
+}
+
+func ReadOnlyReleaseContext(ctx context.Context, rm RM, force bool) (state ReadOnlyState, err error) {
+	endpoint := restReadOnlyRelease
+	if force {
+		endpoint = restReadOnlyForceRelease
+	}
+
+	body, resp, err := rm.Post(ctx, endpoint, nil)
 	if err != nil && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
 		return
 	}
@@ -69,17 +94,5 @@ func ReadOnlyEnable(rm RM) (state ReadOnlyState, err error) {
 
 // ReadOnlyRelease disables read-only mode for the RM instance
 func ReadOnlyRelease(rm RM, force bool) (state ReadOnlyState, err error) {
-	endpoint := restReadOnlyRelease
-	if force {
-		endpoint = restReadOnlyForceRelease
-	}
-
-	body, resp, err := rm.Post(endpoint, nil)
-	if err != nil && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
-		return
-	}
-
-	err = json.Unmarshal(body, &state)
-
-	return
+	return ReadOnlyReleaseContext(context.Background(), rm, force)
 }

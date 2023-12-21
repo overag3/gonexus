@@ -2,6 +2,7 @@ package nexusiq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -126,7 +127,7 @@ func (b *MetricsRequestBuilder) WithOrganization(v string) *MetricsRequestBuilde
 	return b
 }
 
-func (b *MetricsRequestBuilder) build(iq IQ) (req metricRequest, err error) {
+func (b *MetricsRequestBuilder) build(ctx context.Context, iq IQ) (req metricRequest, err error) {
 	// If timePeriod is MONTH - an ISO 8601 year and month without timezone.
 	// If timePeriod is WEEK  - an ISO 8601 week year and week (e.g. week of 29 December 2008 is "2009-W01")
 	formatTime := func(t time.Time) string {
@@ -163,7 +164,7 @@ func (b *MetricsRequestBuilder) build(iq IQ) (req metricRequest, err error) {
 	if b.apps != nil {
 		req.ApplicationIDS = make([]string, len(b.apps))
 		for i, a := range b.apps {
-			app, er := GetApplicationByPublicID(iq, a)
+			app, er := GetApplicationByPublicIDContext(ctx, iq, a)
 			if er != nil {
 				return req, fmt.Errorf("could not find application with public id %s: %v", a, er)
 			}
@@ -174,7 +175,7 @@ func (b *MetricsRequestBuilder) build(iq IQ) (req metricRequest, err error) {
 	if b.orgs != nil {
 		req.OrganizationIDS = make([]string, len(b.orgs))
 		for i, o := range b.orgs {
-			org, er := GetOrganizationByName(iq, o)
+			org, er := GetOrganizationByNameContext(ctx, iq, o)
 			if er != nil {
 				return req, fmt.Errorf("could not find organization with name %s: %v", o, er)
 			}
@@ -190,11 +191,10 @@ func NewMetricsRequestBuilder() *MetricsRequestBuilder {
 	return new(MetricsRequestBuilder)
 }
 
-// GenerateMetrics creates metrics from the given qualifiers
-func GenerateMetrics(iq IQ, builder *MetricsRequestBuilder) ([]Metrics, error) {
+func GenerateMetricsContext(ctx context.Context, iq IQ, builder *MetricsRequestBuilder) ([]Metrics, error) {
 	// TODO: Accept header: application/json or text/csv
 
-	req, err := builder.build(iq)
+	req, err := builder.build(ctx, iq)
 	if err != nil {
 		return nil, fmt.Errorf("could not build request: %v", err)
 	}
@@ -204,7 +204,7 @@ func GenerateMetrics(iq IQ, builder *MetricsRequestBuilder) ([]Metrics, error) {
 		return nil, fmt.Errorf("could not marshal request: %v", err)
 	}
 
-	body, _, err := iq.Post(restMetrics, bytes.NewBuffer(buf))
+	body, _, err := iq.Post(ctx, restMetrics, bytes.NewBuffer(buf))
 	if err != nil {
 		return nil, fmt.Errorf("could not issue request to IQ: %v", err)
 	}
@@ -216,4 +216,9 @@ func GenerateMetrics(iq IQ, builder *MetricsRequestBuilder) ([]Metrics, error) {
 	}
 
 	return metrics, nil
+}
+
+// GenerateMetrics creates metrics from the given qualifiers
+func GenerateMetrics(iq IQ, builder *MetricsRequestBuilder) ([]Metrics, error) {
+	return GenerateMetricsContext(context.Background(), iq, builder)
 }

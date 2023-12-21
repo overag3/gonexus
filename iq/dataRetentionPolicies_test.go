@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -98,7 +99,7 @@ func TestGetRetentionPolicies(t *testing.T) {
 	iq, mock := dataRetentionPoliciesTestIQ(t)
 	defer mock.Close()
 
-	policies, err := GetRetentionPolicies(iq, dummyOrgs[0].Name)
+	policies, err := GetRetentionPoliciesContext(context.Background(), iq, dummyOrgs[0].Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -135,12 +136,12 @@ func TestSetRetentionPolicies(t *testing.T) {
 		SuccessMetrics: expected.SuccessMetrics,
 	}
 
-	err := SetRetentionPolicies(iq, dummyOrgs[0].Name, retentionRequest)
+	err := SetRetentionPoliciesContext(context.Background(), iq, dummyOrgs[0].Name, retentionRequest)
 	if err != nil {
 		t.Error(err)
 	}
 
-	got, err := GetRetentionPolicies(iq, dummyOrgs[0].Name)
+	got, err := GetRetentionPoliciesContext(context.Background(), iq, dummyOrgs[0].Name)
 	if err != nil {
 		t.Error(err)
 	}

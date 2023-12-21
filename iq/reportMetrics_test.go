@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -197,7 +198,7 @@ func TestMetricsRequestBuilder(t *testing.T) {
 	defer mock.Close()
 
 	for _, test := range tests {
-		got, err := test.input.build(iq)
+		got, err := test.input.build(context.Background(), iq)
 		if err != nil {
 			t.Errorf("Unexpected error building metrics request: %v", err)
 			t.Error("input", test.input)
@@ -230,7 +231,7 @@ func TestGenerateMetrics(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := GenerateMetrics(iq, test.input)
+		got, err := GenerateMetricsContext(context.Background(), iq, test.input)
 		if err != nil {
 			t.Error(err)
 		}
@@ -251,7 +252,7 @@ func ExampleGenerateMetrics() {
 
 	reqLastYear := NewMetricsRequestBuilder().Monthly().StartingOn(time.Now().Add(-(24 * time.Hour) * 365)).WithApplication("WebGoat")
 
-	metrics, err := GenerateMetrics(iq, reqLastYear)
+	metrics, err := GenerateMetricsContext(context.Background(), iq, reqLastYear)
 	if err != nil {
 		panic(err)
 	}

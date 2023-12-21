@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -88,13 +89,13 @@ func TestGetComponent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetComponent(tt.args.iq, tt.args.component)
+			got, err := GetComponentContext(context.Background(), tt.args.iq, tt.args.component)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetComponent() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetComponentContext() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetComponent() = %v, want %v", got, tt.want)
+				t.Errorf("GetComponentContext() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -106,7 +107,7 @@ func TestGetComponents(t *testing.T) {
 
 	expected := dummyComponentDetails[0]
 
-	details, err := GetComponents(iq, []Component{expected.Component})
+	details, err := GetComponentsContext(context.Background(), iq, []Component{expected.Component})
 	if err != nil {
 		t.Error(err)
 	}
@@ -145,13 +146,13 @@ func TestGetComponentsByApplication(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetComponentsByApplication(tt.args.iq, tt.args.appPublicID)
+			got, err := GetComponentsByApplicationContext(context.Background(), tt.args.iq, tt.args.appPublicID)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetComponentsByApplication() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetComponentsByApplicationContext() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetComponentsByApplication() = %v, want %v", got, tt.want)
+				t.Errorf("GetComponentsByApplicationContext() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -180,13 +181,13 @@ func TestGetAllComponents(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetAllComponents(tt.args.iq)
+			got, err := GetAllComponentsContext(context.Background(), tt.args.iq)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetAllComponents() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetAllComponentsContext() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetAllComponents() = %v, want %v", got, tt.want)
+				t.Errorf("GetAllComponentsContext() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -145,7 +146,7 @@ func usersTestIQ(t *testing.T, useDeprecated bool) (IQ, *httptest.Server) {
 
 func checkExists(t *testing.T, iq IQ, want User) {
 	t.Helper()
-	got, err := GetUser(iq, want.Username)
+	got, err := GetUserContext(context.Background(), iq, want.Username)
 	if err != nil {
 		t.Error(err)
 	}
@@ -165,7 +166,7 @@ func TestGetUser(t *testing.T) {
 }
 
 func setUser(t *testing.T, iq IQ, want User) {
-	err := SetUser(iq, want)
+	err := SetUserContext(context.Background(), iq, want)
 	if err != nil {
 		t.Error(err)
 	}
@@ -234,12 +235,12 @@ func TestDeleteUser(t *testing.T) {
 	// Create new dummy user
 	setUser(t, iq, want)
 
-	err := DeleteUser(iq, want.Username)
+	err := DeleteUserContext(context.Background(), iq, want.Username)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if _, err := GetUser(iq, want.Username); err == nil {
+	if _, err := GetUserContext(context.Background(), iq, want.Username); err == nil {
 		t.Error("Found user which I tried to delete")
 	}
 }

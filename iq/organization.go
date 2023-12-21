@@ -2,6 +2,7 @@ package nexusiq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -35,9 +36,8 @@ type Organization struct {
 	Tags []IQCategory `json:"tags,omitempty"`
 }
 
-// GetOrganizationByName returns details on the named IQ organization
-func GetOrganizationByName(iq IQ, organizationName string) (*Organization, error) {
-	orgs, err := GetAllOrganizations(iq)
+func GetOrganizationByNameContext(ctx context.Context, iq IQ, organizationName string) (*Organization, error) {
+	orgs, err := GetAllOrganizationsContext(ctx, iq)
 	if err != nil {
 		return nil, fmt.Errorf("organization '%s' not found: %v", organizationName, err)
 	}
@@ -50,8 +50,12 @@ func GetOrganizationByName(iq IQ, organizationName string) (*Organization, error
 	return nil, fmt.Errorf("organization '%s' not found", organizationName)
 }
 
-// CreateOrganization creates an organization in IQ with the given name
-func CreateOrganization(iq IQ, name string) (string, error) {
+// GetOrganizationByName returns details on the named IQ organization
+func GetOrganizationByName(iq IQ, organizationName string) (*Organization, error) {
+	return GetOrganizationByNameContext(context.Background(), iq, organizationName)
+}
+
+func CreateOrganizationContext(ctx context.Context, iq IQ, name string) (string, error) {
 	doError := func(err error) error {
 		return fmt.Errorf("organization '%s' not created: %v", name, err)
 	}
@@ -61,7 +65,7 @@ func CreateOrganization(iq IQ, name string) (string, error) {
 		return "", doError(err)
 	}
 
-	body, _, err := iq.Post(restOrganization, bytes.NewBuffer(request))
+	body, _, err := iq.Post(ctx, restOrganization, bytes.NewBuffer(request))
 	if err != nil {
 		return "", doError(err)
 	}
@@ -74,13 +78,17 @@ func CreateOrganization(iq IQ, name string) (string, error) {
 	return org.ID, nil
 }
 
-// GetAllOrganizations returns a slice of all of the organizations in an IQ instance
-func GetAllOrganizations(iq IQ) ([]Organization, error) {
+// CreateOrganization creates an organization in IQ with the given name
+func CreateOrganization(iq IQ, name string) (string, error) {
+	return CreateOrganizationContext(context.Background(), iq, name)
+}
+
+func GetAllOrganizationsContext(ctx context.Context, iq IQ) ([]Organization, error) {
 	doError := func(err error) error {
 		return fmt.Errorf("organizations not found: %v", err)
 	}
 
-	body, _, err := iq.Get(restOrganization)
+	body, _, err := iq.Get(ctx, restOrganization)
 	if err != nil {
 		return nil, doError(err)
 	}
@@ -91,4 +99,9 @@ func GetAllOrganizations(iq IQ) ([]Organization, error) {
 	}
 
 	return resp.Organizations, nil
+}
+
+// GetAllOrganizations returns a slice of all of the organizations in an IQ instance
+func GetAllOrganizations(iq IQ) ([]Organization, error) {
+	return GetAllOrganizationsContext(context.Background(), iq)
 }

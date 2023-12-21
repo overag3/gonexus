@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -22,8 +23,7 @@ type DatabaseState struct {
 	IndexErrors    int  `json:"indexErrors"`
 }
 
-// CheckDatabase returns the state of the named database
-func CheckDatabase(rm RM, dbName string) (DatabaseState, error) {
+func CheckDatabaseContext(ctx context.Context, rm RM, dbName string) (DatabaseState, error) {
 	doError := func(err error) error {
 		return fmt.Errorf("error checking status of database '%s': %v", dbName, err)
 	}
@@ -31,7 +31,7 @@ func CheckDatabase(rm RM, dbName string) (DatabaseState, error) {
 	var state DatabaseState
 
 	url := fmt.Sprintf(restMaintenanceDBCheck, dbName)
-	body, resp, err := rm.Put(url, nil)
+	body, resp, err := rm.Put(ctx, url, nil)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return state, doError(err)
 	}
@@ -43,8 +43,12 @@ func CheckDatabase(rm RM, dbName string) (DatabaseState, error) {
 	return state, nil
 }
 
-// CheckAllDatabases returns state on all of the databases
-func CheckAllDatabases(rm RM) (states map[string]DatabaseState, err error) {
+// CheckDatabase returns the state of the named database
+func CheckDatabase(rm RM, dbName string) (DatabaseState, error) {
+	return CheckDatabaseContext(context.Background(), rm, dbName)
+}
+
+func CheckAllDatabasesContext(ctx context.Context, rm RM) (states map[string]DatabaseState, err error) {
 	states = make(map[string]DatabaseState)
 
 	check := func(dbName string) {
@@ -52,7 +56,7 @@ func CheckAllDatabases(rm RM) (states map[string]DatabaseState, err error) {
 			return
 		}
 
-		if state, er := CheckDatabase(rm, dbName); er != nil {
+		if state, er := CheckDatabaseContext(ctx, rm, dbName); er != nil {
 			err = fmt.Errorf("error with '%s' database when all states: %v", dbName, er)
 		} else {
 			states[dbName] = state
@@ -65,4 +69,9 @@ func CheckAllDatabases(rm RM) (states map[string]DatabaseState, err error) {
 	check(SecurityDB)
 
 	return
+}
+
+// CheckAllDatabases returns state on all of the databases
+func CheckAllDatabases(rm RM) (states map[string]DatabaseState, err error) {
+	return CheckAllDatabasesContext(context.Background(), rm)
 }

@@ -2,6 +2,7 @@ package nexusiq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -117,10 +118,9 @@ func NewSearchQueryBuilder() *SearchQueryBuilder {
 	return b
 }
 
-// SearchComponents allows searching the indicated IQ instance for specific components
-func SearchComponents(iq IQ, query nexus.SearchQueryBuilder) ([]SearchResult, error) {
+func SearchComponentsContext(ctx context.Context, iq IQ, query nexus.SearchQueryBuilder) ([]SearchResult, error) {
 	endpoint := restSearchComponent + "?" + query.Build()
-	body, resp, err := iq.Get(endpoint)
+	body, resp, err := iq.Get(ctx, endpoint)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("could not find component: %v", err)
 	}
@@ -131,4 +131,9 @@ func SearchComponents(iq IQ, query nexus.SearchQueryBuilder) ([]SearchResult, er
 	}
 
 	return searchResp.Results, nil
+}
+
+// SearchComponents allows searching the indicated IQ instance for specific components
+func SearchComponents(iq IQ, query nexus.SearchQueryBuilder) ([]SearchResult, error) {
+	return SearchComponentsContext(context.Background(), iq, query)
 }

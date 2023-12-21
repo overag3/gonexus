@@ -2,6 +2,7 @@ package nexusrm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -24,24 +25,27 @@ type EmailConfig struct {
 	NexusTrustStoreEnabled        bool   `json:"nexusTrustStoreEnabled"`
 }
 
-func SetEmailConfig(rm RM, config EmailConfig) error {
-
+func SetEmailConfigContext(ctx context.Context, rm RM, config EmailConfig) error {
 	json, err := json.Marshal(config)
 	if err != nil {
 		return err
 	}
 
-	if _, resp, err := rm.Put(restEmail, bytes.NewBuffer(json)); err != nil && resp.StatusCode != http.StatusNoContent {
+	if _, resp, err := rm.Put(ctx, restEmail, bytes.NewBuffer(json)); err != nil && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("email config not set: %v", err)
 	}
 
 	return nil
 }
 
-func GetEmailConfig(rm RM) (EmailConfig, error) {
+func SetEmailConfig(rm RM, config EmailConfig) error {
+	return SetEmailConfigContext(context.Background(), rm, config)
+}
+
+func GetEmailConfigContext(ctx context.Context, rm RM) (EmailConfig, error) {
 	var config EmailConfig
 
-	body, resp, err := rm.Get(restEmail)
+	body, resp, err := rm.Get(ctx, restEmail)
 	if err != nil && resp.StatusCode != http.StatusNoContent {
 		return EmailConfig{}, fmt.Errorf("email config can't getting: %v", err)
 	}
@@ -53,11 +57,18 @@ func GetEmailConfig(rm RM) (EmailConfig, error) {
 	return config, nil
 }
 
-func DeleteEmailConfig(rm RM) error {
+func GetEmailConfig(rm RM) (EmailConfig, error) {
+	return GetEmailConfigContext(context.Background(), rm)
+}
 
-	if resp, err := rm.Del(restEmail); err != nil && resp.StatusCode != http.StatusNoContent {
+func DeleteEmailConfigContext(ctx context.Context, rm RM) error {
+	if resp, err := rm.Del(ctx, restEmail); err != nil && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("email config not deleted: %v", err)
 	}
 
 	return nil
+}
+
+func DeleteEmailConfig(rm RM) error {
+	return DeleteEmailConfigContext(context.Background(), rm)
 }

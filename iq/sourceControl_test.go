@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -115,7 +116,7 @@ func TestGetSourceControlEntryByInternalID(t *testing.T) {
 
 	dummyEntryIdx := 2
 
-	entry, err := getSourceControlEntryByInternalID(iq, dummyEntries[dummyEntryIdx].ApplicationID)
+	entry, err := getSourceControlEntryByInternalID(context.Background(), iq, dummyEntries[dummyEntryIdx].ApplicationID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -131,7 +132,7 @@ func TestGetAllSourceControlEntries(t *testing.T) {
 	iq, mock := sourceControlTestIQ(t)
 	defer mock.Close()
 
-	entries, err := GetAllSourceControlEntries(iq)
+	entries, err := GetAllSourceControlEntriesContext(context.Background(), iq)
 	if err != nil {
 		t.Error(err)
 	}
@@ -161,7 +162,7 @@ func TestGetSourceControlEntry(t *testing.T) {
 
 	dummyEntryIdx := 0
 
-	entry, err := GetSourceControlEntry(iq, dummyApps[dummyEntryIdx].PublicID)
+	entry, err := GetSourceControlEntryContext(context.Background(), iq, dummyApps[dummyEntryIdx].PublicID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -179,12 +180,12 @@ func TestCreateSourceControlEntry(t *testing.T) {
 
 	createdEntry := SourceControlEntry{newEntryID, dummyApps[len(dummyApps)-1].ID, "createdEntryURL", "createEntryToken"}
 
-	err := CreateSourceControlEntry(iq, dummyApps[len(dummyApps)-1].PublicID, createdEntry.RepositoryURL, createdEntry.Token)
+	err := CreateSourceControlEntryContext(context.Background(), iq, dummyApps[len(dummyApps)-1].PublicID, createdEntry.RepositoryURL, createdEntry.Token)
 	if err != nil {
 		t.Error(err)
 	}
 
-	entry, err := GetSourceControlEntry(iq, dummyApps[len(dummyApps)-1].PublicID)
+	entry, err := GetSourceControlEntryContext(context.Background(), iq, dummyApps[len(dummyApps)-1].PublicID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -202,12 +203,12 @@ func TestUpdateSourceControlEntry(t *testing.T) {
 	updatedEntryRepositoryURL := "updatedRepoURL"
 	updatedEntryToken := "updatedToken"
 
-	err := UpdateSourceControlEntry(iq, dummyApps[len(dummyApps)-2].PublicID, updatedEntryRepositoryURL, updatedEntryToken)
+	err := UpdateSourceControlEntryContext(context.Background(), iq, dummyApps[len(dummyApps)-2].PublicID, updatedEntryRepositoryURL, updatedEntryToken)
 	if err != nil {
 		t.Error(err)
 	}
 
-	entry, err := GetSourceControlEntry(iq, dummyApps[len(dummyApps)-2].PublicID)
+	entry, err := GetSourceControlEntryContext(context.Background(), iq, dummyApps[len(dummyApps)-2].PublicID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -229,15 +230,15 @@ func TestDeleteSourceControlEntry(t *testing.T) {
 	app := dummyApps[len(dummyApps)-1]
 	deleteMe := SourceControlEntry{newEntryID, app.ID, "deleteMeURL", "deleteMeToken"}
 
-	if err := CreateSourceControlEntry(iq, app.PublicID, deleteMe.RepositoryURL, deleteMe.Token); err != nil {
+	if err := CreateSourceControlEntryContext(context.Background(), iq, app.PublicID, deleteMe.RepositoryURL, deleteMe.Token); err != nil {
 		t.Error(err)
 	}
 
-	if err := DeleteSourceControlEntry(iq, app.PublicID, newEntryID); err != nil {
+	if err := DeleteSourceControlEntryContext(context.Background(), iq, app.PublicID, newEntryID); err != nil {
 		t.Error(err)
 	}
 
-	if _, err := GetSourceControlEntry(iq, app.PublicID); err == nil {
+	if _, err := GetSourceControlEntryContext(context.Background(), iq, app.PublicID); err == nil {
 		t.Error("Unexpectedly found entry which should have been deleted")
 	}
 }
@@ -249,15 +250,15 @@ func TestDeleteSourceControlEntryByApp(t *testing.T) {
 	app := dummyApps[len(dummyApps)-1]
 	deleteMe := SourceControlEntry{newEntryID, app.ID, "deleteMeURL", "deleteMeToken"}
 
-	if err := CreateSourceControlEntry(iq, app.PublicID, deleteMe.RepositoryURL, deleteMe.Token); err != nil {
+	if err := CreateSourceControlEntryContext(context.Background(), iq, app.PublicID, deleteMe.RepositoryURL, deleteMe.Token); err != nil {
 		t.Error(err)
 	}
 
-	if err := DeleteSourceControlEntryByApp(iq, app.PublicID); err != nil {
+	if err := DeleteSourceControlEntryByAppContext(context.Background(), iq, app.PublicID); err != nil {
 		t.Error(err)
 	}
 
-	if _, err := GetSourceControlEntry(iq, app.PublicID); err == nil {
+	if _, err := GetSourceControlEntryContext(context.Background(), iq, app.PublicID); err == nil {
 		t.Error("Unexpectedly found entry which should have been deleted")
 	}
 }

@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -80,7 +81,7 @@ func TestRoles(t *testing.T) {
 	iq, mock := rolesTestIQ(t)
 	defer mock.Close()
 
-	got, err := Roles(iq)
+	got, err := RolesContext(context.Background(), iq)
 	if err != nil {
 		t.Error(err)
 	}
@@ -96,7 +97,7 @@ func TestRoleByName(t *testing.T) {
 
 	want := dummyRoles[0]
 
-	got, err := RoleByName(iq, want.Name)
+	got, err := RoleByNameContext(context.Background(), iq, want.Name)
 	if err != nil {
 		t.Error(err)
 	}

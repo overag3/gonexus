@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"context"
 	"testing"
 )
 
@@ -9,7 +10,7 @@ func TestCreateFileBlobStore(t *testing.T) {
 	rm, mock := repositoriesTestRM(t)
 	defer mock.Close()
 
-	err := CreateFileBlobStore(rm, "testname", "testpath")
+	err := CreateFileBlobStoreContext(context.Background(), rm, "testname", "testpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -22,11 +23,11 @@ func TestCreateBlobStoreGroup(t *testing.T) {
 	rm, mock := repositoriesTestRM(t)
 	defer mock.Close()
 
-	CreateFileBlobStore(rm, "f1", "pathf1")
-	CreateFileBlobStore(rm, "f2", "pathf2")
-	CreateFileBlobStore(rm, "f3", "pathf3")
+	CreateFileBlobStoreContext(context.Background(), rm, "f1", "pathf1")
+	CreateFileBlobStoreContext(context.Background(), rm, "f2", "pathf2")
+	CreateFileBlobStoreContext(context.Background(), rm, "f3", "pathf3")
 
-	err := CreateBlobStoreGroup(rm, "grpname", []string{"f1", "f2", "f3"})
+	err := CreateBlobStoreGroupContext(context.Background(), rm, "grpname", []string{"f1", "f2", "f3"})
 	if err != nil {
 		t.Error(err)
 	}

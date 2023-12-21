@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -57,7 +58,7 @@ func TestSearchComponent(t *testing.T) {
 	defer mock.Close()
 
 	query := NewSearchQueryBuilder().Coordinates(dummyComponent.ComponentID.Coordinates)
-	components, err := SearchComponents(iq, query)
+	components, err := SearchComponentsContext(context.Background(), iq, query)
 	if err != nil {
 		t.Fatalf("Did not complete search: %v", err)
 	}
@@ -88,7 +89,7 @@ func ExampleSearchComponents() {
 	query = query.Stage(StageBuild)
 	query = query.PackageURL("pkg:maven/commons-collections/commons-collections@3.2")
 
-	components, err := SearchComponents(iq, query)
+	components, err := SearchComponentsContext(context.Background(), iq, query)
 	if err != nil {
 		panic(fmt.Sprintf("Did not complete search: %v", err))
 	}

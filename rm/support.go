@@ -2,6 +2,7 @@ package nexusrm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"mime"
@@ -41,14 +42,13 @@ func NewSupportZipOptions() (o SupportZipOptions) {
 	return
 }
 
-// GetSupportZip generates a support zip with the given options
-func GetSupportZip(rm RM, options SupportZipOptions) ([]byte, string, error) {
+func GetSupportZipContext(ctx context.Context, rm RM, options SupportZipOptions) ([]byte, string, error) {
 	request, err := json.Marshal(options)
 	if err != nil {
 		return nil, "", fmt.Errorf("error retrieving support zip: %v", err)
 	}
 
-	body, resp, err := rm.Post(restSupportZip, bytes.NewBuffer(request))
+	body, resp, err := rm.Post(ctx, restSupportZip, bytes.NewBuffer(request))
 	if err != nil {
 		return nil, "", fmt.Errorf("error retrieving support zip: %v", err)
 	}
@@ -62,4 +62,9 @@ func GetSupportZip(rm RM, options SupportZipOptions) ([]byte, string, error) {
 	}
 
 	return body, params["filename"], nil
+}
+
+// GetSupportZip generates a support zip with the given options
+func GetSupportZip(rm RM, options SupportZipOptions) ([]byte, string, error) {
+	return GetSupportZipContext(context.Background(), rm, options)
 }

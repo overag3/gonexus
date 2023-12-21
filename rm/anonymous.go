@@ -2,6 +2,7 @@ package nexusrm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,10 +16,10 @@ type SettingsAnonAccess struct {
 	RealmName string `json:"realmName"`
 }
 
-func GetAnonAccess(rm RM) (SettingsAnonAccess, error) {
+func GetAnonAccessContext(ctx context.Context, rm RM) (SettingsAnonAccess, error) {
 	var settings SettingsAnonAccess
 
-	body, resp, err := rm.Get(restAnonymous)
+	body, resp, err := rm.Get(ctx, restAnonymous)
 	if err != nil && resp.StatusCode != http.StatusNoContent {
 		return SettingsAnonAccess{}, fmt.Errorf("anonymous access settings can't getting: %v", err)
 	}
@@ -30,15 +31,23 @@ func GetAnonAccess(rm RM) (SettingsAnonAccess, error) {
 	return settings, nil
 }
 
-func SetAnonAccess(rm RM, settings SettingsAnonAccess) error {
+func GetAnonAccess(rm RM) (SettingsAnonAccess, error) {
+	return GetAnonAccessContext(context.Background(), rm)
+}
+
+func SetAnonAccessContext(ctx context.Context, rm RM, settings SettingsAnonAccess) error {
 	json, err := json.Marshal(settings)
 	if err != nil {
 		return err
 	}
 
-	if _, resp, err := rm.Put(restAnonymous, bytes.NewBuffer(json)); err != nil && resp.StatusCode != http.StatusNoContent {
+	if _, resp, err := rm.Put(ctx, restAnonymous, bytes.NewBuffer(json)); err != nil && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("email config not set: %v", err)
 	}
 
 	return nil
+}
+
+func SetAnonAccess(rm RM, settings SettingsAnonAccess) error {
+	return SetAnonAccessContext(context.Background(), rm, settings)
 }

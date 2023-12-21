@@ -2,6 +2,7 @@ package nexusiq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -26,16 +27,15 @@ type DataRetentionPolicy struct {
 	MaxAge        string `json:"maxAge"`
 }
 
-// GetRetentionPolicies returns the current retention policies
-func GetRetentionPolicies(iq IQ, orgName string) (policies DataRetentionPolicies, err error) {
-	org, err := GetOrganizationByName(iq, orgName)
+func GetRetentionPoliciesContext(ctx context.Context, iq IQ, orgName string) (policies DataRetentionPolicies, err error) {
+	org, err := GetOrganizationByNameContext(ctx, iq, orgName)
 	if err != nil {
 		return policies, fmt.Errorf("could not retrieve organization named %s: %v", orgName, err)
 	}
 
 	endpoint := fmt.Sprintf(restDataRetentionPolicies, org.ID)
 
-	body, _, err := iq.Get(endpoint)
+	body, _, err := iq.Get(ctx, endpoint)
 	if err != nil {
 		return policies, fmt.Errorf("did not retrieve retention policies for organization %s: %v", orgName, err)
 	}
@@ -45,9 +45,13 @@ func GetRetentionPolicies(iq IQ, orgName string) (policies DataRetentionPolicies
 	return
 }
 
-// SetRetentionPolicies updates the retention policies
-func SetRetentionPolicies(iq IQ, orgName string, policies DataRetentionPolicies) error {
-	org, err := GetOrganizationByName(iq, orgName)
+// GetRetentionPolicies returns the current retention policies
+func GetRetentionPolicies(iq IQ, orgName string) (policies DataRetentionPolicies, err error) {
+	return GetRetentionPoliciesContext(context.Background(), iq, orgName)
+}
+
+func SetRetentionPoliciesContext(ctx context.Context, iq IQ, orgName string, policies DataRetentionPolicies) error {
+	org, err := GetOrganizationByNameContext(ctx, iq, orgName)
 	if err != nil {
 		return fmt.Errorf("could not retrieve organization named %s: %v", orgName, err)
 	}
@@ -59,10 +63,15 @@ func SetRetentionPolicies(iq IQ, orgName string, policies DataRetentionPolicies)
 
 	endpoint := fmt.Sprintf(restDataRetentionPolicies, org.ID)
 
-	_, _, err = iq.Put(endpoint, bytes.NewBuffer(request))
+	_, _, err = iq.Put(ctx, endpoint, bytes.NewBuffer(request))
 	if err != nil {
 		return fmt.Errorf("did not set retention policies for organization %s: %v", orgName, err)
 	}
 
 	return nil
+}
+
+// SetRetentionPolicies updates the retention policies
+func SetRetentionPolicies(iq IQ, orgName string, policies DataRetentionPolicies) error {
+	return SetRetentionPoliciesContext(context.Background(), iq, orgName, policies)
 }

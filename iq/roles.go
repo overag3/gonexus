@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -22,11 +23,10 @@ type Role struct {
 	Description string `json:"description"`
 }
 
-// Roles returns a slice of all the roles in the IQ instance
-func Roles(iq IQ) ([]Role, error) {
-	body, resp, err := iq.Get(restRoles)
+func RolesContext(ctx context.Context, iq IQ) ([]Role, error) {
+	body, resp, err := iq.Get(ctx, restRoles)
 	if resp.StatusCode == http.StatusNotFound {
-		body, _, err = iq.Get(restRolesDeprecated)
+		body, _, err = iq.Get(ctx, restRolesDeprecated)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve roles: %v", err)
@@ -40,9 +40,13 @@ func Roles(iq IQ) ([]Role, error) {
 	return list.Roles, nil
 }
 
-// RoleByName returns the named role
-func RoleByName(iq IQ, name string) (Role, error) {
-	roles, err := Roles(iq)
+// Roles returns a slice of all the roles in the IQ instance
+func Roles(iq IQ) ([]Role, error) {
+	return RolesContext(context.Background(), iq)
+}
+
+func RoleByNameContext(ctx context.Context, iq IQ, name string) (Role, error) {
+	roles, err := RolesContext(ctx, iq)
 	if err != nil {
 		return Role{}, fmt.Errorf("did not find role with name %s: %v", name, err)
 	}
@@ -56,12 +60,21 @@ func RoleByName(iq IQ, name string) (Role, error) {
 	return Role{}, fmt.Errorf("did not find role with name %s", name)
 }
 
-// GetSystemAdminID returns the identifier of the System Administrator role
-func GetSystemAdminID(iq IQ) (string, error) {
-	role, err := RoleByName(iq, "System Administrator")
+// RoleByName returns the named role
+func RoleByName(iq IQ, name string) (Role, error) {
+	return RoleByNameContext(context.Background(), iq, name)
+}
+
+func GetSystemAdminIDContext(ctx context.Context, iq IQ) (string, error) {
+	role, err := RoleByNameContext(ctx, iq, "System Administrator")
 	if err != nil {
 		return "", fmt.Errorf("did not get admin role: %v", err)
 	}
 
 	return role.ID, nil
+}
+
+// GetSystemAdminID returns the identifier of the System Administrator role
+func GetSystemAdminID(iq IQ) (string, error) {
+	return GetSystemAdminIDContext(context.Background(), iq)
 }

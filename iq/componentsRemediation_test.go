@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -103,7 +104,7 @@ func TestRemediationByApp(t *testing.T) {
 
 	id, stage := dummyApps[0].PublicID, "build"
 
-	remediation, err := GetRemediationByApp(iq, dummyComponent, stage, id)
+	remediation, err := GetRemediationByAppContext(context.Background(), iq, dummyComponent, stage, id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -120,7 +121,7 @@ func TestRemediationByOrg(t *testing.T) {
 
 	id, stage := dummyOrgs[0].Name, "build"
 
-	remediation, err := GetRemediationByOrg(iq, dummyComponent, stage, id)
+	remediation, err := GetRemediationByOrgContext(context.Background(), iq, dummyComponent, stage, id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -138,7 +139,7 @@ func TestRemediationByAppReport(t *testing.T) {
 
 	appIdx, reportID := 0, "0"
 
-	got, err := GetRemediationsByAppReport(iq, dummyApps[appIdx].PublicID, reportID)
+	got, err := GetRemediationsByAppReportContext(context.Background(), iq, dummyApps[appIdx].PublicID, reportID)
 	if err != nil {
 		t.Error(err)
 	}

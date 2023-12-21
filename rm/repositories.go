@@ -2,6 +2,7 @@ package nexusrm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -161,7 +162,7 @@ type RepositoryRawHosted struct {
 	Raw     AttributesRaw           `json:"raw"`
 }
 
-func CreateRepositoryHosted(rm RM, format repositoryFormat, r interface{}) error {
+func CreateRepositoryHostedContext(ctx context.Context, rm RM, format repositoryFormat, r interface{}) error {
 	buf, err := json.Marshal(r)
 	if err != nil {
 		return fmt.Errorf("could not marshal: %v", err)
@@ -196,7 +197,7 @@ func CreateRepositoryHosted(rm RM, format repositoryFormat, r interface{}) error
 	case Yum:
 		restEndpointRepository = restRepositoriesHostedYum
 	}
-	_, resp, err := rm.Post(restEndpointRepository, bytes.NewBuffer(buf))
+	_, resp, err := rm.Post(ctx, restEndpointRepository, bytes.NewBuffer(buf))
 	if err != nil && resp == nil {
 		return fmt.Errorf("could not create repository: %v", err)
 	}
@@ -204,7 +205,11 @@ func CreateRepositoryHosted(rm RM, format repositoryFormat, r interface{}) error
 	return nil
 }
 
-func CreateRepositoryProxy(rm RM, format repositoryFormat, r interface{}) error {
+func CreateRepositoryHosted(rm RM, format repositoryFormat, r interface{}) error {
+	return CreateRepositoryHostedContext(context.Background(), rm, format, r)
+}
+
+func CreateRepositoryProxyContext(ctx context.Context, rm RM, format repositoryFormat, r interface{}) error {
 	buf, err := json.Marshal(r)
 	if err != nil {
 		return fmt.Errorf("could not marshal: %v", err)
@@ -247,7 +252,7 @@ func CreateRepositoryProxy(rm RM, format repositoryFormat, r interface{}) error 
 	case Yum:
 		restEndpointRepository = restRepositoriesProxyYum
 	}
-	_, resp, err := rm.Post(restEndpointRepository, bytes.NewBuffer(buf))
+	_, resp, err := rm.Post(ctx, restEndpointRepository, bytes.NewBuffer(buf))
 	if err != nil && resp == nil {
 		return fmt.Errorf("could not create repository: %v", err)
 	}
@@ -255,23 +260,30 @@ func CreateRepositoryProxy(rm RM, format repositoryFormat, r interface{}) error 
 	return nil
 }
 
-func DeleteRepositoryByName(rm RM, name string) error {
+func CreateRepositoryProxy(rm RM, format repositoryFormat, r interface{}) error {
+	return CreateRepositoryProxyContext(context.Background(), rm, format, r)
+}
+
+func DeleteRepositoryByNameContext(ctx context.Context, rm RM, name string) error {
 	url := fmt.Sprintf("%s/%s", restRepositories, name)
 
-	if resp, err := rm.Del(url); err != nil && resp.StatusCode != http.StatusNoContent {
+	if resp, err := rm.Del(ctx, url); err != nil && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("repository not deleted '%s': %v", name, err)
 	}
 
 	return nil
 }
 
-// GetRepositories returns a list of components in the indicated repository
-func GetRepositories(rm RM) ([]Repository, error) {
+func DeleteRepositoryByName(rm RM, name string) error {
+	return DeleteRepositoryByNameContext(context.Background(), rm, name)
+}
+
+func GetRepositoriesContext(ctx context.Context, rm RM) ([]Repository, error) {
 	doError := func(err error) error {
 		return fmt.Errorf("could not find repositories: %v", err)
 	}
 
-	body, resp, err := rm.Get(restRepositories)
+	body, resp, err := rm.Get(ctx, restRepositories)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return nil, doError(err)
 	}
@@ -284,9 +296,13 @@ func GetRepositories(rm RM) ([]Repository, error) {
 	return repos, nil
 }
 
-// GetRepositoryByName returns information on a named repository
-func GetRepositoryByName(rm RM, name string) (repo Repository, err error) {
-	repos, err := GetRepositories(rm)
+// GetRepositories returns a list of components in the indicated repository
+func GetRepositories(rm RM) ([]Repository, error) {
+	return GetRepositoriesContext(context.Background(), rm)
+}
+
+func GetRepositoryByNameContext(ctx context.Context, rm RM, name string) (repo Repository, err error) {
+	repos, err := GetRepositoriesContext(ctx, rm)
 	if err != nil {
 		return repo, fmt.Errorf("could not get list of repositories: %v", err)
 	}
@@ -298,4 +314,9 @@ func GetRepositoryByName(rm RM, name string) (repo Repository, err error) {
 	}
 
 	return repo, fmt.Errorf("did not find repository '%s': %v", name, err)
+}
+
+// GetRepositoryByName returns information on a named repository
+func GetRepositoryByName(rm RM, name string) (repo Repository, err error) {
+	return GetRepositoryByNameContext(context.Background(), rm, name)
 }

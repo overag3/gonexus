@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -68,7 +69,7 @@ func TestGetOranizationByName(t *testing.T) {
 
 	dummyOrgsIdx := 2
 
-	org, err := GetOrganizationByName(iq, dummyOrgs[dummyOrgsIdx].Name)
+	org, err := GetOrganizationByNameContext(context.Background(), iq, dummyOrgs[dummyOrgsIdx].Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,12 +91,12 @@ func TestCreateOrganization(t *testing.T) {
 	createdOrg := Organization{Name: "createdOrg"}
 
 	var err error
-	createdOrg.ID, err = CreateOrganization(iq, createdOrg.Name)
+	createdOrg.ID, err = CreateOrganizationContext(context.Background(), iq, createdOrg.Name)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	org, err := GetOrganizationByName(iq, createdOrg.Name)
+	org, err := GetOrganizationByNameContext(context.Background(), iq, createdOrg.Name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +112,7 @@ func TestGetAllOrganizations(t *testing.T) {
 	iq, mock := organizationTestIQ(t)
 	defer mock.Close()
 
-	organizations, err := GetAllOrganizations(iq)
+	organizations, err := GetAllOrganizationsContext(context.Background(), iq)
 	if err != nil {
 		panic(err)
 	}
@@ -125,7 +126,7 @@ func ExampleCreateOrganization() {
 		panic(err)
 	}
 
-	orgID, err := CreateOrganization(iq, "DatabaseTeam")
+	orgID, err := CreateOrganizationContext(context.Background(), iq, "DatabaseTeam")
 	if err != nil {
 		panic(err)
 	}

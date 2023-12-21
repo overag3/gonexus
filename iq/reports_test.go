@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -162,7 +163,7 @@ func TestGetAllReportInfos(t *testing.T) {
 	iq, mock := reportsTestIQ(t)
 	defer mock.Close()
 
-	infos, err := GetAllReportInfos(iq)
+	infos, err := GetAllReportInfosContext(context.Background(), iq)
 	if err != nil {
 		t.Error(err)
 	}
@@ -184,7 +185,7 @@ func TestGetReportInfosByAppID(t *testing.T) {
 
 	testIdx := 0
 
-	infos, err := GetReportInfosByAppID(iq, dummyApps[testIdx].PublicID)
+	infos, err := GetReportInfosByAppIDContext(context.Background(), iq, dummyApps[testIdx].PublicID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -204,7 +205,7 @@ func Test_getRawReportByAppReportID(t *testing.T) {
 
 	testIdx := 0
 
-	report, err := getRawReportByAppReportID(iq, dummyApps[testIdx].PublicID, fmt.Sprintf("%d", testIdx))
+	report, err := getRawReportByAppReportID(context.Background(), iq, dummyApps[testIdx].PublicID, fmt.Sprintf("%d", testIdx))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +222,7 @@ func TestGetRawReportByAppID(t *testing.T) {
 
 	testIdx := 0
 
-	report, err := GetRawReportByAppID(iq, dummyApps[testIdx].PublicID, dummyReportInfos[testIdx].Stage)
+	report, err := GetRawReportByAppIDContext(context.Background(), iq, dummyApps[testIdx].PublicID, dummyReportInfos[testIdx].Stage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +239,7 @@ func TestGetPolicyReportByAppID(t *testing.T) {
 
 	testIdx := 0
 
-	report, err := GetPolicyReportByAppID(iq, dummyApps[testIdx].PublicID, dummyReportInfos[testIdx].Stage)
+	report, err := GetPolicyReportByAppIDContext(context.Background(), iq, dummyApps[testIdx].PublicID, dummyReportInfos[testIdx].Stage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,7 +256,7 @@ func TestGetReportByAppID(t *testing.T) {
 
 	testIdx := 0
 
-	report, err := GetReportByAppID(iq, dummyApps[testIdx].PublicID, dummyReportInfos[testIdx].Stage)
+	report, err := GetReportByAppIDContext(context.Background(), iq, dummyApps[testIdx].PublicID, dummyReportInfos[testIdx].Stage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +295,7 @@ func TestGetReportInfosByOrganization(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotInfos, err := GetReportInfosByOrganization(tt.args.iq, tt.args.organizationName)
+			gotInfos, err := GetReportInfosByOrganizationContext(context.Background(), tt.args.iq, tt.args.organizationName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetReportInfosByOrganization() error = %v, wantErr %v", err, tt.wantErr)
 				return

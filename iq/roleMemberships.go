@@ -2,6 +2,7 @@ package nexusiq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -53,9 +54,9 @@ type Member struct {
 	UserOrGroupName string `json:"userOrGroupName"`
 }
 
-func hasRev70API(iq IQ) bool {
+func hasRev70API(ctx context.Context, iq IQ) bool {
 	api := fmt.Sprintf(restRoleMembersOrgGet, RootOrganization)
-	request, _ := iq.NewRequest("HEAD", api, nil)
+	request, _ := iq.NewRequest(ctx, "HEAD", api, nil)
 	_, resp, _ := iq.Do(request)
 	return resp.StatusCode != http.StatusNotFound
 }
@@ -78,15 +79,15 @@ func newMappings(roleID, memberType, memberName string) memberMappings {
 	}
 }
 
-func organizationAuthorizationsByID(iq IQ, orgID string) ([]MemberMapping, error) {
+func organizationAuthorizationsByID(ctx context.Context, iq IQ, orgID string) ([]MemberMapping, error) {
 	var endpoint string
-	if hasRev70API(iq) {
+	if hasRev70API(ctx, iq) {
 		endpoint = fmt.Sprintf(restRoleMembersOrgGet, orgID)
 	} else {
 		endpoint = fmt.Sprintf(restRoleMembersOrgDeprecated, orgID)
 	}
 
-	body, _, err := iq.Get(endpoint)
+	body, _, err := iq.Get(ctx, endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve role mapping for organization %s: %v", orgID, err)
 	}
@@ -97,15 +98,15 @@ func organizationAuthorizationsByID(iq IQ, orgID string) ([]MemberMapping, error
 	return mappings.MemberMappings, err
 }
 
-func organizationAuthorizationsByRoleID(iq IQ, roleID string) ([]MemberMapping, error) {
-	orgs, err := GetAllOrganizations(iq)
+func organizationAuthorizationsByRoleID(ctx context.Context, iq IQ, roleID string) ([]MemberMapping, error) {
+	orgs, err := GetAllOrganizationsContext(ctx, iq)
 	if err != nil {
 		return nil, fmt.Errorf("could not find organizations: %v", err)
 	}
 
 	mappings := make([]MemberMapping, 0)
 	for _, org := range orgs {
-		orgMaps, _ := organizationAuthorizationsByID(iq, org.ID)
+		orgMaps, _ := organizationAuthorizationsByID(ctx, iq, org.ID)
 		for _, m := range orgMaps {
 			if m.RoleID == roleID {
 				mappings = append(mappings, m)
@@ -116,40 +117,48 @@ func organizationAuthorizationsByRoleID(iq IQ, roleID string) ([]MemberMapping, 
 	return mappings, nil
 }
 
-// OrganizationAuthorizations returns the member mappings of an organization
-func OrganizationAuthorizations(iq IQ, name string) ([]MemberMapping, error) {
-	org, err := GetOrganizationByName(iq, name)
+func OrganizationAuthorizationsContext(ctx context.Context, iq IQ, name string) ([]MemberMapping, error) {
+	org, err := GetOrganizationByNameContext(ctx, iq, name)
 	if err != nil {
 		return nil, fmt.Errorf("could not find organization with name %s: %v", name, err)
 	}
 
-	return organizationAuthorizationsByID(iq, org.ID)
+	return organizationAuthorizationsByID(ctx, iq, org.ID)
 }
 
-// OrganizationAuthorizationsByRole returns the member mappings of all organizations which match the given role
-func OrganizationAuthorizationsByRole(iq IQ, roleName string) ([]MemberMapping, error) {
-	role, err := RoleByName(iq, roleName)
+// OrganizationAuthorizations returns the member mappings of an organization
+func OrganizationAuthorizations(iq IQ, name string) ([]MemberMapping, error) {
+	return OrganizationAuthorizationsContext(context.Background(), iq, name)
+}
+
+func OrganizationAuthorizationsByRoleContext(ctx context.Context, iq IQ, roleName string) ([]MemberMapping, error) {
+	role, err := RoleByNameContext(ctx, iq, roleName)
 	if err != nil {
 		return nil, fmt.Errorf("could not find role with name %s: %v", roleName, err)
 	}
 
-	return organizationAuthorizationsByRoleID(iq, role.ID)
+	return organizationAuthorizationsByRoleID(ctx, iq, role.ID)
 }
 
-func setOrganizationAuth(iq IQ, name, roleName, member, memberType string) error {
-	org, err := GetOrganizationByName(iq, name)
+// OrganizationAuthorizationsByRole returns the member mappings of all organizations which match the given role
+func OrganizationAuthorizationsByRole(iq IQ, roleName string) ([]MemberMapping, error) {
+	return OrganizationAuthorizationsByRoleContext(context.Background(), iq, roleName)
+}
+
+func setOrganizationAuth(ctx context.Context, iq IQ, name, roleName, member, memberType string) error {
+	org, err := GetOrganizationByNameContext(ctx, iq, name)
 	if err != nil {
 		return fmt.Errorf("could not find organization with name %s: %v", name, err)
 	}
 
-	role, err := RoleByName(iq, roleName)
+	role, err := RoleByNameContext(ctx, iq, roleName)
 	if err != nil {
 		return fmt.Errorf("could not find role with name %s: %v", roleName, err)
 	}
 
 	var endpoint string
 	var payload io.Reader
-	if hasRev70API(iq) {
+	if hasRev70API(ctx, iq) {
 		switch memberType {
 		case MemberTypeUser:
 			endpoint = fmt.Sprintf(restRoleMembersOrgUser, org.ID, role.ID, member)
@@ -158,7 +167,7 @@ func setOrganizationAuth(iq IQ, name, roleName, member, memberType string) error
 		}
 	} else {
 		endpoint = fmt.Sprintf(restRoleMembersOrgDeprecated, org.ID)
-		current, err := OrganizationAuthorizations(iq, name)
+		current, err := OrganizationAuthorizationsContext(ctx, iq, name)
 		if err != nil && current == nil {
 			current = make([]MemberMapping, 0)
 		}
@@ -171,7 +180,7 @@ func setOrganizationAuth(iq IQ, name, roleName, member, memberType string) error
 		payload = bytes.NewBuffer(buf)
 	}
 
-	_, _, err = iq.Put(endpoint, payload)
+	_, _, err = iq.Put(ctx, endpoint, payload)
 	if err != nil {
 		return fmt.Errorf("could not update organization role mapping: %v", err)
 	}
@@ -179,25 +188,33 @@ func setOrganizationAuth(iq IQ, name, roleName, member, memberType string) error
 	return nil
 }
 
+func SetOrganizationUserContext(ctx context.Context, iq IQ, name, roleName, user string) error {
+	return setOrganizationAuth(ctx, iq, name, roleName, user, MemberTypeUser)
+}
+
 // SetOrganizationUser sets the role and user that can have access to an organization
 func SetOrganizationUser(iq IQ, name, roleName, user string) error {
-	return setOrganizationAuth(iq, name, roleName, user, MemberTypeUser)
+	return SetOrganizationUserContext(context.Background(), iq, name, roleName, user)
+}
+
+func SetOrganizationGroupContext(ctx context.Context, iq IQ, name, roleName, group string) error {
+	return setOrganizationAuth(ctx, iq, name, roleName, group, MemberTypeGroup)
 }
 
 // SetOrganizationGroup sets the role and group that can have access to an organization
 func SetOrganizationGroup(iq IQ, name, roleName, group string) error {
-	return setOrganizationAuth(iq, name, roleName, group, MemberTypeGroup)
+	return SetOrganizationGroupContext(context.Background(), iq, name, roleName, group)
 }
 
-func applicationAuthorizationsByID(iq IQ, appID string) ([]MemberMapping, error) {
+func applicationAuthorizationsByID(ctx context.Context, iq IQ, appID string) ([]MemberMapping, error) {
 	var endpoint string
-	if hasRev70API(iq) {
+	if hasRev70API(ctx, iq) {
 		endpoint = fmt.Sprintf(restRoleMembersAppGet, appID)
 	} else {
 		endpoint = fmt.Sprintf(restRoleMembersAppDeprecated, appID)
 	}
 
-	body, _, err := iq.Get(endpoint)
+	body, _, err := iq.Get(ctx, endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve role mapping for application %s: %v", appID, err)
 	}
@@ -208,15 +225,15 @@ func applicationAuthorizationsByID(iq IQ, appID string) ([]MemberMapping, error)
 	return mappings.MemberMappings, err
 }
 
-func applicationAuthorizationsByRoleID(iq IQ, roleID string) ([]MemberMapping, error) {
-	apps, err := GetAllApplications(iq)
+func applicationAuthorizationsByRoleID(ctx context.Context, iq IQ, roleID string) ([]MemberMapping, error) {
+	apps, err := GetAllApplicationsContext(ctx, iq)
 	if err != nil {
 		return nil, fmt.Errorf("could not find applications: %v", err)
 	}
 
 	mappings := make([]MemberMapping, 0)
 	for _, app := range apps {
-		appMaps, _ := applicationAuthorizationsByID(iq, app.ID)
+		appMaps, _ := applicationAuthorizationsByID(ctx, iq, app.ID)
 		for _, m := range appMaps {
 			if m.RoleID == roleID {
 				mappings = append(mappings, m)
@@ -227,40 +244,48 @@ func applicationAuthorizationsByRoleID(iq IQ, roleID string) ([]MemberMapping, e
 	return mappings, nil
 }
 
-// ApplicationAuthorizations returns the member mappings of an application
-func ApplicationAuthorizations(iq IQ, name string) ([]MemberMapping, error) {
-	app, err := GetApplicationByPublicID(iq, name)
+func ApplicationAuthorizationsContext(ctx context.Context, iq IQ, name string) ([]MemberMapping, error) {
+	app, err := GetApplicationByPublicIDContext(ctx, iq, name)
 	if err != nil {
 		return nil, fmt.Errorf("could not find application with name %s: %v", name, err)
 	}
 
-	return applicationAuthorizationsByID(iq, app.ID)
+	return applicationAuthorizationsByID(ctx, iq, app.ID)
 }
 
-// ApplicationAuthorizationsByRole returns the member mappings of all applications which match the given role
-func ApplicationAuthorizationsByRole(iq IQ, roleName string) ([]MemberMapping, error) {
-	role, err := RoleByName(iq, roleName)
+// ApplicationAuthorizations returns the member mappings of an application
+func ApplicationAuthorizations(iq IQ, name string) ([]MemberMapping, error) {
+	return ApplicationAuthorizationsContext(context.Background(), iq, name)
+}
+
+func ApplicationAuthorizationsByRoleContext(ctx context.Context, iq IQ, roleName string) ([]MemberMapping, error) {
+	role, err := RoleByNameContext(ctx, iq, roleName)
 	if err != nil {
 		return nil, fmt.Errorf("could not find role with name %s: %v", roleName, err)
 	}
 
-	return applicationAuthorizationsByRoleID(iq, role.ID)
+	return applicationAuthorizationsByRoleID(ctx, iq, role.ID)
 }
 
-func setApplicationAuth(iq IQ, name, roleName, member, memberType string) error {
-	app, err := GetApplicationByPublicID(iq, name)
+// ApplicationAuthorizationsByRole returns the member mappings of all applications which match the given role
+func ApplicationAuthorizationsByRole(iq IQ, roleName string) ([]MemberMapping, error) {
+	return ApplicationAuthorizationsByRoleContext(context.Background(), iq, roleName)
+}
+
+func setApplicationAuth(ctx context.Context, iq IQ, name, roleName, member, memberType string) error {
+	app, err := GetApplicationByPublicIDContext(ctx, iq, name)
 	if err != nil {
 		return fmt.Errorf("could not find application with name %s: %v", name, err)
 	}
 
-	role, err := RoleByName(iq, roleName)
+	role, err := RoleByNameContext(ctx, iq, roleName)
 	if err != nil {
 		return fmt.Errorf("could not find role with name %s: %v", roleName, err)
 	}
 
 	var endpoint string
 	var payload io.Reader
-	if hasRev70API(iq) {
+	if hasRev70API(ctx, iq) {
 		switch memberType {
 		case MemberTypeUser:
 			endpoint = fmt.Sprintf(restRoleMembersAppUser, app.ID, role.ID, member)
@@ -269,7 +294,7 @@ func setApplicationAuth(iq IQ, name, roleName, member, memberType string) error 
 		}
 	} else {
 		endpoint = fmt.Sprintf(restRoleMembersAppDeprecated, app.ID)
-		current, err := ApplicationAuthorizations(iq, name)
+		current, err := ApplicationAuthorizationsContext(ctx, iq, name)
 		if err != nil && current == nil {
 			current = make([]MemberMapping, 0)
 		}
@@ -282,7 +307,7 @@ func setApplicationAuth(iq IQ, name, roleName, member, memberType string) error 
 		payload = bytes.NewBuffer(buf)
 	}
 
-	_, _, err = iq.Put(endpoint, payload)
+	_, _, err = iq.Put(ctx, endpoint, payload)
 	if err != nil {
 		return fmt.Errorf("could not update organization role mapping: %v", err)
 	}
@@ -290,19 +315,27 @@ func setApplicationAuth(iq IQ, name, roleName, member, memberType string) error 
 	return nil
 }
 
+func SetApplicationUserContext(ctx context.Context, iq IQ, name, roleName, user string) error {
+	return setApplicationAuth(ctx, iq, name, roleName, user, MemberTypeUser)
+}
+
 // SetApplicationUser sets the role and user that can have access to an application
 func SetApplicationUser(iq IQ, name, roleName, user string) error {
-	return setApplicationAuth(iq, name, roleName, user, MemberTypeUser)
+	return SetApplicationUserContext(context.Background(), iq, name, roleName, user)
+}
+
+func SetApplicationGroupContext(ctx context.Context, iq IQ, name, roleName, group string) error {
+	return setApplicationAuth(ctx, iq, name, roleName, group, MemberTypeGroup)
 }
 
 // SetApplicationGroup sets the role and group that can have access to an application
 func SetApplicationGroup(iq IQ, name, roleName, group string) error {
-	return setApplicationAuth(iq, name, roleName, group, MemberTypeGroup)
+	return SetApplicationGroupContext(context.Background(), iq, name, roleName, group)
 }
 
-func revokeLT70(iq IQ, authType, authName, roleName, memberType, memberName string) error {
+func revokeLT70(ctx context.Context, iq IQ, authType, authName, roleName, memberType, memberName string) error {
 	var err error
-	role, err := RoleByName(iq, roleName)
+	role, err := RoleByNameContext(ctx, iq, roleName)
 	if err != nil {
 		return fmt.Errorf("could not find role with name %s: %v", roleName, err)
 	}
@@ -313,18 +346,18 @@ func revokeLT70(iq IQ, authType, authName, roleName, memberType, memberName stri
 	)
 	switch authType {
 	case "organization":
-		org, err := GetOrganizationByName(iq, authName)
+		org, err := GetOrganizationByNameContext(ctx, iq, authName)
 		if err == nil {
 			authID = org.ID
 			baseEndpoint = restRoleMembersOrgDeprecated
-			mapping, err = OrganizationAuthorizations(iq, authName)
+			mapping, err = OrganizationAuthorizationsContext(ctx, iq, authName)
 		}
 	case "application":
-		app, err := GetApplicationByPublicID(iq, authName)
+		app, err := GetApplicationByPublicIDContext(ctx, iq, authName)
 		if err == nil {
 			authID = app.ID
 			baseEndpoint = restRoleMembersAppDeprecated
-			mapping, err = ApplicationAuthorizations(iq, authName)
+			mapping, err = ApplicationAuthorizationsContext(ctx, iq, authName)
 		}
 	}
 	if err != nil && mapping != nil {
@@ -349,7 +382,7 @@ func revokeLT70(iq IQ, authType, authName, roleName, memberType, memberName stri
 	}
 
 	endpoint := fmt.Sprintf(baseEndpoint, authID)
-	_, _, err = iq.Put(endpoint, bytes.NewBuffer(buf))
+	_, _, err = iq.Put(ctx, endpoint, bytes.NewBuffer(buf))
 	if err != nil {
 		return fmt.Errorf("could not remove role mapping: %v", err)
 	}
@@ -357,8 +390,8 @@ func revokeLT70(iq IQ, authType, authName, roleName, memberType, memberName stri
 	return nil
 }
 
-func revoke(iq IQ, authType, authName, roleName, memberType, memberName string) error {
-	role, err := RoleByName(iq, roleName)
+func revoke(ctx context.Context, iq IQ, authType, authName, roleName, memberType, memberName string) error {
+	role, err := RoleByNameContext(ctx, iq, roleName)
 	if err != nil {
 		return fmt.Errorf("could not find role with name %s: %v", roleName, err)
 	}
@@ -368,7 +401,7 @@ func revoke(iq IQ, authType, authName, roleName, memberType, memberName string) 
 	)
 	switch authType {
 	case "organization":
-		org, err := GetOrganizationByName(iq, authName)
+		org, err := GetOrganizationByNameContext(ctx, iq, authName)
 		if err == nil {
 			authID = org.ID
 			switch memberType {
@@ -379,7 +412,7 @@ func revoke(iq IQ, authType, authName, roleName, memberType, memberName string) 
 			}
 		}
 	case "application":
-		app, err := GetApplicationByPublicID(iq, authName)
+		app, err := GetApplicationByPublicIDContext(ctx, iq, authName)
 		if err == nil {
 			authID = app.ID
 			switch memberType {
@@ -392,48 +425,64 @@ func revoke(iq IQ, authType, authName, roleName, memberType, memberName string) 
 	}
 
 	endpoint := fmt.Sprintf(baseEndpoint, authID, role.ID, memberName)
-	_, err = iq.Del(endpoint)
+	_, err = iq.Del(ctx, endpoint)
 	return err
 }
 
-// RevokeOrganizationUser removes a user and role from the named organization
-func RevokeOrganizationUser(iq IQ, name, roleName, user string) error {
-	if !hasRev70API(iq) {
-		return revokeLT70(iq, "organization", name, roleName, MemberTypeUser, user)
+func RevokeOrganizationUserContext(ctx context.Context, iq IQ, name, roleName, user string) error {
+	if !hasRev70API(ctx, iq) {
+		return revokeLT70(ctx, iq, "organization", name, roleName, MemberTypeUser, user)
 	}
-	return revoke(iq, "organization", name, roleName, MemberTypeUser, user)
+	return revoke(ctx, iq, "organization", name, roleName, MemberTypeUser, user)
+}
+
+func RevokeOrganizationUser(iq IQ, name, roleName, user string) error {
+	return RevokeOrganizationUserContext(context.Background(), iq, name, roleName, user)
+}
+
+func RevokeOrganizationGroupContext(ctx context.Context, iq IQ, name, roleName, group string) error {
+	if !hasRev70API(ctx, iq) {
+		return revokeLT70(ctx, iq, "organization", name, roleName, MemberTypeGroup, group)
+	}
+	return revoke(ctx, iq, "organization", name, roleName, MemberTypeGroup, group)
 }
 
 // RevokeOrganizationGroup removes a group and role from the named organization
 func RevokeOrganizationGroup(iq IQ, name, roleName, group string) error {
-	if !hasRev70API(iq) {
-		return revokeLT70(iq, "organization", name, roleName, MemberTypeGroup, group)
+	return RevokeOrganizationGroupContext(context.Background(), iq, name, roleName, group)
+}
+
+func RevokeApplicationUserContext(ctx context.Context, iq IQ, name, roleName, user string) error {
+	if !hasRev70API(ctx, iq) {
+		return revokeLT70(ctx, iq, "application", name, roleName, MemberTypeUser, user)
 	}
-	return revoke(iq, "organization", name, roleName, MemberTypeGroup, group)
+	return revoke(ctx, iq, "application", name, roleName, MemberTypeUser, user)
 }
 
 // RevokeApplicationUser removes a user and role from the named application
 func RevokeApplicationUser(iq IQ, name, roleName, user string) error {
-	if !hasRev70API(iq) {
-		return revokeLT70(iq, "application", name, roleName, MemberTypeUser, user)
+	return RevokeApplicationUserContext(context.Background(), iq, name, roleName, user)
+
+}
+
+func RevokeApplicationGroupContext(ctx context.Context, iq IQ, name, roleName, group string) error {
+	if !hasRev70API(ctx, iq) {
+		return revokeLT70(ctx, iq, "application", name, roleName, MemberTypeGroup, group)
 	}
-	return revoke(iq, "application", name, roleName, MemberTypeUser, user)
+	return revoke(ctx, iq, "application", name, roleName, MemberTypeGroup, group)
 }
 
 // RevokeApplicationGroup removes a group and role from the named application
 func RevokeApplicationGroup(iq IQ, name, roleName, group string) error {
-	if !hasRev70API(iq) {
-		return revokeLT70(iq, "application", name, roleName, MemberTypeGroup, group)
-	}
-	return revoke(iq, "application", name, roleName, MemberTypeGroup, group)
+	return RevokeApplicationGroupContext(context.Background(), iq, name, roleName, group)
 }
 
-func repositoriesAuth(iq IQ, method, roleName, memberType, member string) error {
-	if !hasRev70API(iq) {
+func repositoriesAuth(ctx context.Context, iq IQ, method, roleName, memberType, member string) error {
+	if !hasRev70API(ctx, iq) {
 		return fmt.Errorf("did not find revision 70 API")
 	}
 
-	role, err := RoleByName(iq, roleName)
+	role, err := RoleByNameContext(ctx, iq, roleName)
 	if err != nil {
 		return fmt.Errorf("could not find role with name %s: %v", roleName, err)
 	}
@@ -448,9 +497,9 @@ func repositoriesAuth(iq IQ, method, roleName, memberType, member string) error 
 
 	switch method {
 	case http.MethodPut:
-		_, _, err = iq.Put(endpoint, nil)
+		_, _, err = iq.Put(ctx, endpoint, nil)
 	case http.MethodDelete:
-		_, err = iq.Del(endpoint)
+		_, err = iq.Del(ctx, endpoint)
 	}
 	if err != nil {
 		return fmt.Errorf("could not affect repositories role mapping: %v", err)
@@ -459,8 +508,8 @@ func repositoriesAuth(iq IQ, method, roleName, memberType, member string) error 
 	return nil
 }
 
-func repositoriesAuthorizationsByRoleID(iq IQ, roleID string) ([]MemberMapping, error) {
-	auths, err := RepositoriesAuthorizations(iq)
+func repositoriesAuthorizationsByRoleID(ctx context.Context, iq IQ, roleID string) ([]MemberMapping, error) {
+	auths, err := RepositoriesAuthorizationsContext(ctx, iq)
 	if err != nil {
 		return nil, fmt.Errorf("could not find authorization mappings for repositories: %v", err)
 	}
@@ -475,9 +524,8 @@ func repositoriesAuthorizationsByRoleID(iq IQ, roleID string) ([]MemberMapping, 
 	return mappings, nil
 }
 
-// RepositoriesAuthorizations returns the member mappings of all repositories
-func RepositoriesAuthorizations(iq IQ) ([]MemberMapping, error) {
-	body, _, err := iq.Get(restRoleMembersReposGet)
+func RepositoriesAuthorizationsContext(ctx context.Context, iq IQ) ([]MemberMapping, error) {
+	body, _, err := iq.Get(ctx, restRoleMembersReposGet)
 	if err != nil {
 		return nil, fmt.Errorf("could not get repositories mappings: %v", err)
 	}
@@ -491,49 +539,74 @@ func RepositoriesAuthorizations(iq IQ) ([]MemberMapping, error) {
 	return mappings.MemberMappings, nil
 }
 
-// RepositoriesAuthorizationsByRole returns the member mappings of all repositories which match the given role
-func RepositoriesAuthorizationsByRole(iq IQ, roleName string) ([]MemberMapping, error) {
-	role, err := RoleByName(iq, roleName)
+// RepositoriesAuthorizations returns the member mappings of all repositories
+func RepositoriesAuthorizations(iq IQ) ([]MemberMapping, error) {
+	return RepositoriesAuthorizationsContext(context.Background(), iq)
+}
+
+func RepositoriesAuthorizationsByRoleContext(ctx context.Context, iq IQ, roleName string) ([]MemberMapping, error) {
+	role, err := RoleByNameContext(ctx, iq, roleName)
 	if err != nil {
 		return nil, fmt.Errorf("could not find role with name %s: %v", roleName, err)
 	}
 
-	return repositoriesAuthorizationsByRoleID(iq, role.ID)
+	return repositoriesAuthorizationsByRoleID(ctx, iq, role.ID)
+}
+
+// RepositoriesAuthorizationsByRole returns the member mappings of all repositories which match the given role
+func RepositoriesAuthorizationsByRole(iq IQ, roleName string) ([]MemberMapping, error) {
+	return RepositoriesAuthorizationsByRoleContext(context.Background(), iq, roleName)
+}
+
+func SetRepositoriesUserContext(ctx context.Context, iq IQ, roleName, user string) error {
+	return repositoriesAuth(ctx, iq, http.MethodPut, roleName, MemberTypeUser, user)
 }
 
 // SetRepositoriesUser sets the role and user that can have access to the repositories
 func SetRepositoriesUser(iq IQ, roleName, user string) error {
-	return repositoriesAuth(iq, http.MethodPut, roleName, MemberTypeUser, user)
+	return SetRepositoriesUserContext(context.Background(), iq, roleName, user)
+}
+
+func SetRepositoriesGroupContext(ctx context.Context, iq IQ, roleName, group string) error {
+	return repositoriesAuth(ctx, iq, http.MethodPut, roleName, MemberTypeGroup, group)
 }
 
 // SetRepositoriesGroup sets the role and group that can have access to the repositories
 func SetRepositoriesGroup(iq IQ, roleName, group string) error {
-	return repositoriesAuth(iq, http.MethodPut, roleName, MemberTypeGroup, group)
+	return SetRepositoriesGroupContext(context.Background(), iq, roleName, group)
+}
+
+func RevokeRepositoriesUserContext(ctx context.Context, iq IQ, roleName, user string) error {
+	return repositoriesAuth(ctx, iq, http.MethodDelete, roleName, MemberTypeUser, user)
 }
 
 // RevokeRepositoriesUser revoke the role and user that can have access to the repositories
 func RevokeRepositoriesUser(iq IQ, roleName, user string) error {
-	return repositoriesAuth(iq, http.MethodDelete, roleName, MemberTypeUser, user)
+	return RevokeRepositoriesUserContext(context.Background(), iq, roleName, user)
+}
+
+func RevokeRepositoriesGroupContext(ctx context.Context, iq IQ, roleName, group string) error {
+	return repositoriesAuth(ctx, iq, http.MethodDelete, roleName, MemberTypeGroup, group)
 }
 
 // RevokeRepositoriesGroup revoke the role and group that can have access to the repositories
 func RevokeRepositoriesGroup(iq IQ, roleName, group string) error {
-	return repositoriesAuth(iq, http.MethodDelete, roleName, MemberTypeGroup, group)
+	return RevokeRepositoriesGroupContext(context.Background(), iq, roleName, group)
 }
 
-func membersByRoleID(iq IQ, roleID string) ([]MemberMapping, error) {
+func membersByRoleID(ctx context.Context, iq IQ, roleID string) ([]MemberMapping, error) {
 	members := make([]MemberMapping, 0)
 
-	if m, err := organizationAuthorizationsByRoleID(iq, roleID); err == nil && len(m) > 0 {
+	if m, err := organizationAuthorizationsByRoleID(ctx, iq, roleID); err == nil && len(m) > 0 {
 		members = append(members, m...)
 	}
 
-	if m, err := applicationAuthorizationsByRoleID(iq, roleID); err == nil && len(m) > 0 {
+	if m, err := applicationAuthorizationsByRoleID(ctx, iq, roleID); err == nil && len(m) > 0 {
 		members = append(members, m...)
 	}
 
-	if hasRev70API(iq) {
-		if m, err := repositoriesAuthorizationsByRoleID(iq, roleID); err == nil && len(m) > 0 {
+	if hasRev70API(ctx, iq) {
+		if m, err := repositoriesAuthorizationsByRoleID(ctx, iq, roleID); err == nil && len(m) > 0 {
 			members = append(members, m...)
 		}
 	}
@@ -541,18 +614,21 @@ func membersByRoleID(iq IQ, roleID string) ([]MemberMapping, error) {
 	return members, nil
 }
 
-// MembersByRole returns all users and groups by role name
-func MembersByRole(iq IQ, roleName string) ([]MemberMapping, error) {
-	role, err := RoleByName(iq, roleName)
+func MembersByRoleContext(ctx context.Context, iq IQ, roleName string) ([]MemberMapping, error) {
+	role, err := RoleByNameContext(ctx, iq, roleName)
 	if err != nil {
 		return nil, fmt.Errorf("could not find role with name %s: %v", roleName, err)
 	}
-	return membersByRoleID(iq, role.ID)
+	return membersByRoleID(ctx, iq, role.ID)
 }
 
-// GlobalAuthorizations returns all of the users and roles who have the administrator role across all of IQ
-func GlobalAuthorizations(iq IQ) ([]MemberMapping, error) {
-	body, _, err := iq.Get(restRoleMembersGlobalGet)
+// MembersByRole returns all users and groups by role name
+func MembersByRole(iq IQ, roleName string) ([]MemberMapping, error) {
+	return MembersByRoleContext(context.Background(), iq, roleName)
+}
+
+func GlobalAuthorizationsContext(ctx context.Context, iq IQ) ([]MemberMapping, error) {
+	body, _, err := iq.Get(ctx, restRoleMembersGlobalGet)
 	if err != nil {
 		return nil, fmt.Errorf("could not get global members: %v", err)
 	}
@@ -566,12 +642,17 @@ func GlobalAuthorizations(iq IQ) ([]MemberMapping, error) {
 	return mappings.MemberMappings, nil
 }
 
-func globalAuth(iq IQ, method, roleName, memberType, member string) error {
-	if !hasRev70API(iq) {
+// GlobalAuthorizations returns all of the users and roles who have the administrator role across all of IQ
+func GlobalAuthorizations(iq IQ) ([]MemberMapping, error) {
+	return GlobalAuthorizationsContext(context.Background(), iq)
+}
+
+func globalAuth(ctx context.Context, iq IQ, method, roleName, memberType, member string) error {
+	if !hasRev70API(ctx, iq) {
 		return fmt.Errorf("did not find revision 70 API")
 	}
 
-	role, err := RoleByName(iq, roleName)
+	role, err := RoleByNameContext(ctx, iq, roleName)
 	if err != nil {
 		return fmt.Errorf("could not find role with name %s: %v", roleName, err)
 	}
@@ -586,9 +667,9 @@ func globalAuth(iq IQ, method, roleName, memberType, member string) error {
 
 	switch method {
 	case http.MethodPut:
-		_, _, err = iq.Put(endpoint, nil)
+		_, _, err = iq.Put(ctx, endpoint, nil)
 	case http.MethodDelete:
-		_, err = iq.Del(endpoint)
+		_, err = iq.Del(ctx, endpoint)
 	}
 	if err != nil {
 		return fmt.Errorf("could not affect global role mapping: %v", err)
@@ -597,22 +678,38 @@ func globalAuth(iq IQ, method, roleName, memberType, member string) error {
 	return nil
 }
 
+func SetGlobalUserContext(ctx context.Context, iq IQ, roleName, user string) error {
+	return globalAuth(ctx, iq, http.MethodPut, roleName, MemberTypeUser, user)
+}
+
 // SetGlobalUser sets the role and user that can have access to the repositories
 func SetGlobalUser(iq IQ, roleName, user string) error {
-	return globalAuth(iq, http.MethodPut, roleName, MemberTypeUser, user)
+	return SetGlobalUserContext(context.Background(), iq, roleName, user)
+}
+
+func SetGlobalGroupContext(ctx context.Context, iq IQ, roleName, group string) error {
+	return globalAuth(ctx, iq, http.MethodPut, roleName, MemberTypeGroup, group)
 }
 
 // SetGlobalGroup sets the role and group that can have access to the global
 func SetGlobalGroup(iq IQ, roleName, group string) error {
-	return globalAuth(iq, http.MethodPut, roleName, MemberTypeGroup, group)
+	return SetGlobalGroupContext(context.Background(), iq, roleName, group)
+}
+
+func RevokeGlobalUserContext(ctx context.Context, iq IQ, roleName, user string) error {
+	return globalAuth(ctx, iq, http.MethodDelete, roleName, MemberTypeUser, user)
 }
 
 // RevokeGlobalUser revoke the role and user that can have access to the global
 func RevokeGlobalUser(iq IQ, roleName, user string) error {
-	return globalAuth(iq, http.MethodDelete, roleName, MemberTypeUser, user)
+	return RevokeGlobalUserContext(context.Background(), iq, roleName, user)
+}
+
+func RevokeGlobalGroupContext(ctx context.Context, iq IQ, roleName, group string) error {
+	return globalAuth(ctx, iq, http.MethodDelete, roleName, MemberTypeGroup, group)
 }
 
 // RevokeGlobalGroup revoke the role and group that can have access to the global
 func RevokeGlobalGroup(iq IQ, roleName, group string) error {
-	return globalAuth(iq, http.MethodDelete, roleName, MemberTypeGroup, group)
+	return RevokeGlobalGroupContext(context.Background(), iq, roleName, group)
 }

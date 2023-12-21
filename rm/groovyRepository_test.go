@@ -1,16 +1,12 @@
 package nexusrm
 
-import (
-// "testing"
-)
-
 /*
 func TestCreateFileBlobStore(t *testing.T) {
 	t.Skip("Needs new framework")
 	rm, mock := repositoriesTestRM(t)
 	defer mock.Close()
 
-	err := CreateFileBlobStore(rm, "testname", "testpath")
+	err := CreateFileBlobStoreContext(rm, "testname", "testpath")
 	if err != nil {
 		t.Error(err)
 	}

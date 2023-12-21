@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -21,9 +22,8 @@ type policiesList struct {
 	Policies []PolicyInfo `json:"policies"`
 }
 
-// GetPolicies returns a list of all of the policies in IQ
-func GetPolicies(iq IQ) ([]PolicyInfo, error) {
-	body, _, err := iq.Get(restPolicies)
+func GetPoliciesContext(ctx context.Context, iq IQ) ([]PolicyInfo, error) {
+	body, _, err := iq.Get(ctx, restPolicies)
 	if err != nil {
 		return nil, fmt.Errorf("could not get list of policies: %v", err)
 	}
@@ -36,9 +36,13 @@ func GetPolicies(iq IQ) ([]PolicyInfo, error) {
 	return resp.Policies, nil
 }
 
-// GetPolicyInfoByName returns an information object for the named policy
-func GetPolicyInfoByName(iq IQ, policyName string) (PolicyInfo, error) {
-	policies, err := GetPolicies(iq)
+// GetPolicies returns a list of all of the policies in IQ
+func GetPolicies(iq IQ) ([]PolicyInfo, error) {
+	return GetPoliciesContext(context.Background(), iq)
+}
+
+func GetPolicyInfoByNameContext(ctx context.Context, iq IQ, policyName string) (PolicyInfo, error) {
+	policies, err := GetPoliciesContext(ctx, iq)
 	if err != nil {
 		return PolicyInfo{}, fmt.Errorf("did not find policy with name %s: %v", policyName, err)
 	}
@@ -50,4 +54,9 @@ func GetPolicyInfoByName(iq IQ, policyName string) (PolicyInfo, error) {
 	}
 
 	return PolicyInfo{}, fmt.Errorf("did not find policy with name %s", policyName)
+}
+
+// GetPolicyInfoByName returns an information object for the named policy
+func GetPolicyInfoByName(iq IQ, policyName string) (PolicyInfo, error) {
+	return GetPolicyInfoByNameContext(context.Background(), iq, policyName)
 }
