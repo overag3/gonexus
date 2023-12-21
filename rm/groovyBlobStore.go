@@ -2,6 +2,7 @@ package nexusrm
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"text/template"
 )
@@ -54,13 +55,12 @@ func DeleteBlobStore(rm RM, name string) error {
 		return err
 	}
 
-	_, err = ScriptRunOnce(rm, newAnonGroovyScript(buf.String()), nil)
+	_, err = ScriptRunOnceContext(rm, newAnonGroovyScript(buf.String()), nil)
 	return err
 }
 */
 
-// CreateFileBlobStore creates a blobstore
-func CreateFileBlobStore(rm RM, name, path string) error {
+func CreateFileBlobStoreContext(ctx context.Context, rm RM, name, path string) error {
 	tmpl, err := template.New("fbs").Parse(groovyCreateFileBlobStore)
 	if err != nil {
 		return fmt.Errorf("could not parse template: %v", err)
@@ -72,12 +72,16 @@ func CreateFileBlobStore(rm RM, name, path string) error {
 		return fmt.Errorf("could not create file blobstore from template: %v", err)
 	}
 
-	_, err = ScriptRunOnce(rm, newAnonGroovyScript(buf.String()), nil)
+	_, err = ScriptRunOnceContext(ctx, rm, newAnonGroovyScript(buf.String()), nil)
 	return fmt.Errorf("could not create file blobstore: %v", err)
 }
 
-// CreateBlobStoreGroup creates a blobstore
-func CreateBlobStoreGroup(rm RM, name string, blobStores []string) error {
+// CreateFileBlobStore creates a blobstore
+func CreateFileBlobStore(rm RM, name, path string) error {
+	return CreateFileBlobStoreContext(context.Background(), rm, name, path)
+}
+
+func CreateBlobStoreGroupContext(ctx context.Context, rm RM, name string, blobStores []string) error {
 	tmpl, err := template.New("group").Parse(groovyCreateBlobStoreGroup)
 	if err != nil {
 		return fmt.Errorf("could not parse template: %v", err)
@@ -89,6 +93,11 @@ func CreateBlobStoreGroup(rm RM, name string, blobStores []string) error {
 		return fmt.Errorf("could not create group blobstore from template: %v", err)
 	}
 
-	_, err = ScriptRunOnce(rm, newAnonGroovyScript(buf.String()), nil)
+	_, err = ScriptRunOnceContext(ctx, rm, newAnonGroovyScript(buf.String()), nil)
 	return fmt.Errorf("could not create group blobstore: %v", err)
+}
+
+// CreateBlobStoreGroup creates a blobstore group
+func CreateBlobStoreGroup(rm RM, name string, blobStores []string) error {
+	return CreateBlobStoreGroupContext(context.Background(), rm, name, blobStores)
 }

@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -98,7 +99,7 @@ func TestEvaluateComponents(t *testing.T) {
 
 	appID := "dummyAppId"
 
-	report, err := EvaluateComponents(iq, []Component{dummyComponent}, appID)
+	report, err := EvaluateComponentsContext(context.Background(), iq, []Component{dummyComponent}, appID)
 	if err != nil {
 		t.Error(err)
 	}

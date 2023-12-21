@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -128,7 +129,7 @@ func TestScriptList(t *testing.T) {
 	rm, mock := scriptsTestRM(t)
 	defer mock.Close()
 
-	scripts, err := ScriptList(rm)
+	scripts, err := ScriptListContext(context.Background(), rm)
 	if err != nil {
 		t.Error(err)
 	}
@@ -151,7 +152,7 @@ func TestScriptGet(t *testing.T) {
 
 	dummyScriptsIdx := 1
 
-	script, err := ScriptGet(rm, dummyScripts[dummyScriptsIdx].Name)
+	script, err := ScriptGetContext(context.Background(), rm, dummyScripts[dummyScriptsIdx].Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -168,11 +169,11 @@ func TestScriptUpload(t *testing.T) {
 
 	newScript := Script{Name: "newScript", Content: "log.info('I am new!')", Type: "groovy"}
 
-	if err := ScriptUpload(rm, newScript); err != nil {
+	if err := ScriptUploadContext(context.Background(), rm, newScript); err != nil {
 		t.Error(err)
 	}
 
-	script, err := ScriptGet(rm, newScript.Name)
+	script, err := ScriptGetContext(context.Background(), rm, newScript.Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -197,11 +198,11 @@ func TestScriptUpdate(t *testing.T) {
 		t.Fatal("I am an idiot")
 	}
 
-	if err := ScriptUpdate(rm, updatedScript); err != nil {
+	if err := ScriptUpdateContext(context.Background(), rm, updatedScript); err != nil {
 		t.Error(err)
 	}
 
-	script, err := ScriptGet(rm, updatedScript.Name)
+	script, err := ScriptGetContext(context.Background(), rm, updatedScript.Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -218,15 +219,15 @@ func TestScriptDelete(t *testing.T) {
 
 	deleteMe := Script{Name: "deleteMe", Content: "log.info('Existence is pain!')", Type: "groovy"}
 
-	if err := ScriptUpload(rm, deleteMe); err != nil {
+	if err := ScriptUploadContext(context.Background(), rm, deleteMe); err != nil {
 		t.Error(err)
 	}
 
-	if err := ScriptDelete(rm, deleteMe.Name); err != nil {
+	if err := ScriptDeleteContext(context.Background(), rm, deleteMe.Name); err != nil {
 		t.Error(err)
 	}
 
-	if _, err := ScriptGet(rm, deleteMe.Name); err == nil {
+	if _, err := ScriptGetContext(context.Background(), rm, deleteMe.Name); err == nil {
 		t.Error("Found script which should have been deleted")
 	}
 }
@@ -238,11 +239,11 @@ func TestScriptRun(t *testing.T) {
 	script := Script{Name: "scriptArgsTest", Content: "return args", Type: "groovy"}
 	input := "this is a test"
 
-	if err := ScriptUpload(rm, script); err != nil {
+	if err := ScriptUploadContext(context.Background(), rm, script); err != nil {
 		t.Error(err)
 	}
 
-	ret, err := ScriptRun(rm, script.Name, []byte(input))
+	ret, err := ScriptRunContext(context.Background(), rm, script.Name, []byte(input))
 	if err != nil {
 		t.Error(err)
 	}
@@ -251,7 +252,7 @@ func TestScriptRun(t *testing.T) {
 		t.Errorf("Did not get expected script output: %s\n", ret)
 	}
 
-	if err = ScriptDelete(rm, script.Name); err != nil {
+	if err = ScriptDeleteContext(context.Background(), rm, script.Name); err != nil {
 		t.Error(err)
 	}
 }
@@ -263,7 +264,7 @@ func TestScriptRunOnce(t *testing.T) {
 	script := Script{Name: "scriptArgsTest", Content: "return args", Type: "groovy"}
 	input := "this is a test"
 
-	ret, err := ScriptRunOnce(rm, script, []byte(input))
+	ret, err := ScriptRunOnceContext(context.Background(), rm, script, []byte(input))
 	if err != nil {
 		t.Error(err)
 	}
@@ -272,7 +273,7 @@ func TestScriptRunOnce(t *testing.T) {
 		t.Errorf("Did not get expected script output: %s\n", ret)
 	}
 
-	if _, err = ScriptGet(rm, script.Name); err == nil {
+	if _, err = ScriptGetContext(context.Background(), rm, script.Name); err == nil {
 		t.Error("Found script which should have been deleted")
 	}
 }

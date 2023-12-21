@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -99,7 +100,7 @@ func TestTagsList(t *testing.T) {
 	rm, mock := taggingTestRM(t)
 	defer mock.Close()
 
-	tags, err := TagsList(rm)
+	tags, err := TagsListContext(context.Background(), rm)
 	if err != nil {
 		t.Error(err)
 	}
@@ -121,7 +122,7 @@ func TestGetTag(t *testing.T) {
 
 	want := dummyTags[0]
 
-	got, err := GetTag(rm, want.Name)
+	got, err := GetTagContext(context.Background(), rm, want.Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -139,7 +140,7 @@ func TestAddTag(t *testing.T) {
 
 	newName := "newTestTag"
 
-	got, err := AddTag(rm, newName, nil)
+	got, err := AddTagContext(context.Background(), rm, newName, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -148,7 +149,7 @@ func TestAddTag(t *testing.T) {
 		t.Error("Did not get tag with expected name")
 	}
 
-	gotAgain, err := GetTag(rm, newName)
+	gotAgain, err := GetTagContext(context.Background(), rm, newName)
 	if err != nil {
 		t.Error(err)
 	}

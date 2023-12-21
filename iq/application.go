@@ -2,6 +2,7 @@ package nexusiq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -44,13 +45,12 @@ type Application struct {
 	} `json:"applicationTags,omitempty"`
 }
 
-// GetApplicationByPublicID returns details on the named IQ application
-func GetApplicationByPublicID(iq IQ, applicationPublicID string) (*Application, error) {
+func GetApplicationByPublicIDContext(ctx context.Context, iq IQ, applicationPublicID string) (*Application, error) {
 	doError := func(err error) error {
 		return fmt.Errorf("application '%s' not found: %v", applicationPublicID, err)
 	}
 	endpoint := fmt.Sprintf(restApplicationByPublic, applicationPublicID)
-	body, _, err := iq.Get(endpoint)
+	body, _, err := iq.Get(ctx, endpoint)
 	if err != nil {
 		return nil, doError(err)
 	}
@@ -67,8 +67,12 @@ func GetApplicationByPublicID(iq IQ, applicationPublicID string) (*Application, 
 	return &resp.Applications[0], nil
 }
 
-// CreateApplication creates an application in IQ with the given name and identifier
-func CreateApplication(iq IQ, name, id, organizationID string) (string, error) {
+// GetApplicationByPublicID returns details on the named IQ application
+func GetApplicationByPublicID(iq IQ, applicationPublicID string) (*Application, error) {
+	return GetApplicationByPublicIDContext(context.Background(), iq, applicationPublicID)
+}
+
+func CreateApplicationContext(ctx context.Context, iq IQ, name, id, organizationID string) (string, error) {
 	if name == "" || id == "" || organizationID == "" {
 		return "", fmt.Errorf("cannot create application with empty values")
 	}
@@ -82,7 +86,7 @@ func CreateApplication(iq IQ, name, id, organizationID string) (string, error) {
 		return doError(err)
 	}
 
-	body, _, err := iq.Post(restApplication, bytes.NewBuffer(request))
+	body, _, err := iq.Post(ctx, restApplication, bytes.NewBuffer(request))
 	if err != nil {
 		return doError(err)
 	}
@@ -95,17 +99,25 @@ func CreateApplication(iq IQ, name, id, organizationID string) (string, error) {
 	return resp.ID, nil
 }
 
-// DeleteApplication deletes an application in IQ with the given id
-func DeleteApplication(iq IQ, applicationID string) error {
-	if resp, err := iq.Del(fmt.Sprintf("%s/%s", restApplication, applicationID)); err != nil && resp.StatusCode != http.StatusNoContent {
+// CreateApplication creates an application in IQ with the given name and identifier
+func CreateApplication(iq IQ, name, id, organizationID string) (string, error) {
+	return CreateApplicationContext(context.Background(), iq, name, id, organizationID)
+}
+
+func DeleteApplicationContext(ctx context.Context, iq IQ, applicationID string) error {
+	if resp, err := iq.Del(ctx, fmt.Sprintf("%s/%s", restApplication, applicationID)); err != nil && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("application '%s' not deleted: %v", applicationID, err)
 	}
 	return nil
 }
 
-// GetAllApplications returns a slice of all of the applications in an IQ instance
-func GetAllApplications(iq IQ) ([]Application, error) {
-	body, _, err := iq.Get(restApplication)
+// DeleteApplication deletes an application in IQ with the given id
+func DeleteApplication(iq IQ, applicationID string) error {
+	return DeleteApplicationContext(context.Background(), iq, applicationID)
+}
+
+func GetAllApplicationsContext(ctx context.Context, iq IQ) ([]Application, error) {
+	body, _, err := iq.Get(ctx, restApplication)
 	if err != nil {
 		return nil, fmt.Errorf("applications not found: %v", err)
 	}
@@ -118,14 +130,18 @@ func GetAllApplications(iq IQ) ([]Application, error) {
 	return resp.Applications, nil
 }
 
-// GetApplicationsByOrganization returns all applications under a given organization
-func GetApplicationsByOrganization(iq IQ, organizationName string) ([]Application, error) {
-	org, err := GetOrganizationByName(iq, organizationName)
+// GetAllApplications returns a slice of all of the applications in an IQ instance
+func GetAllApplications(iq IQ) ([]Application, error) {
+	return GetAllApplicationsContext(context.Background(), iq)
+}
+
+func GetApplicationsByOrganizationContext(ctx context.Context, iq IQ, organizationName string) ([]Application, error) {
+	org, err := GetOrganizationByNameContext(ctx, iq, organizationName)
 	if err != nil {
 		return nil, fmt.Errorf("organization not found: %v", err)
 	}
 
-	apps, err := GetAllApplications(iq)
+	apps, err := GetAllApplicationsContext(ctx, iq)
 	if err != nil {
 		return nil, fmt.Errorf("could not get applications list: %v", err)
 	}
@@ -138,4 +154,9 @@ func GetApplicationsByOrganization(iq IQ, organizationName string) ([]Applicatio
 	}
 
 	return orgApps, nil
+}
+
+// GetApplicationsByOrganization returns all applications under a given organization
+func GetApplicationsByOrganization(iq IQ, organizationName string) ([]Application, error) {
+	return GetApplicationsByOrganizationContext(context.Background(), iq, organizationName)
 }

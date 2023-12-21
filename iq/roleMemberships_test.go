@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -397,7 +398,7 @@ func testGetOrganizationAuthorizations(t *testing.T, iq IQ) {
 	t.Helper()
 	dummyIdx := 0
 
-	got, err := OrganizationAuthorizations(iq, dummyOrgs[dummyIdx].Name)
+	got, err := OrganizationAuthorizationsContext(context.Background(), iq, dummyOrgs[dummyIdx].Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -424,7 +425,7 @@ func testGetOrganizationAuthorizationsByRole(t *testing.T, iq IQ) {
 		}
 	}
 
-	got, err := OrganizationAuthorizationsByRole(iq, role.Name)
+	got, err := OrganizationAuthorizationsByRoleContext(context.Background(), iq, role.Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -448,7 +449,7 @@ func testGetApplicationAuthorizations(t *testing.T, iq IQ) {
 	t.Helper()
 	dummyIdx := 0
 
-	got, err := ApplicationAuthorizations(iq, dummyApps[dummyIdx].PublicID)
+	got, err := ApplicationAuthorizationsContext(context.Background(), iq, dummyApps[dummyIdx].PublicID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -474,7 +475,7 @@ func testGetApplicationAuthorizationsByRole(t *testing.T, iq IQ) {
 		}
 	}
 
-	got, err := ApplicationAuthorizationsByRole(iq, role.Name)
+	got, err := ApplicationAuthorizationsByRoleContext(context.Background(), iq, role.Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -517,22 +518,22 @@ func testSetAuth(t *testing.T, iq IQ, authTarget string, memberType string) {
 	case "organization":
 		switch memberType {
 		case MemberTypeUser:
-			err = SetOrganizationUser(iq, dummyOrgs[dummyIdx].Name, dummyRoles[role].Name, memberName)
+			err = SetOrganizationUserContext(context.Background(), iq, dummyOrgs[dummyIdx].Name, dummyRoles[role].Name, memberName)
 		case MemberTypeGroup:
-			err = SetOrganizationGroup(iq, dummyOrgs[dummyIdx].Name, dummyRoles[role].Name, memberName)
+			err = SetOrganizationGroupContext(context.Background(), iq, dummyOrgs[dummyIdx].Name, dummyRoles[role].Name, memberName)
 		}
 		if err == nil {
-			got, err = OrganizationAuthorizations(iq, dummyOrgs[dummyIdx].Name)
+			got, err = OrganizationAuthorizationsContext(context.Background(), iq, dummyOrgs[dummyIdx].Name)
 		}
 	case "application":
 		switch memberType {
 		case MemberTypeUser:
-			err = SetApplicationUser(iq, dummyApps[dummyIdx].PublicID, dummyRoles[role].Name, memberName)
+			err = SetApplicationUserContext(context.Background(), iq, dummyApps[dummyIdx].PublicID, dummyRoles[role].Name, memberName)
 		case MemberTypeGroup:
-			err = SetApplicationGroup(iq, dummyApps[dummyIdx].PublicID, dummyRoles[role].Name, memberName)
+			err = SetApplicationGroupContext(context.Background(), iq, dummyApps[dummyIdx].PublicID, dummyRoles[role].Name, memberName)
 		}
 		if err == nil {
-			got, err = ApplicationAuthorizations(iq, dummyApps[dummyIdx].PublicID)
+			got, err = ApplicationAuthorizationsContext(context.Background(), iq, dummyApps[dummyIdx].PublicID)
 		}
 	}
 	if err != nil {
@@ -613,68 +614,68 @@ func testRevoke(t *testing.T, iq IQ, authType, memberType string) {
 		dummyOrgName := dummyOrgs[0].Name
 		switch memberType {
 		case MemberTypeUser:
-			err = SetOrganizationUser(iq, dummyOrgName, role.Name, name)
+			err = SetOrganizationUserContext(context.Background(), iq, dummyOrgName, role.Name, name)
 			if err == nil {
-				err = RevokeOrganizationUser(iq, dummyOrgName, role.Name, name)
+				err = RevokeOrganizationUserContext(context.Background(), iq, dummyOrgName, role.Name, name)
 			}
 		case MemberTypeGroup:
-			err = SetOrganizationGroup(iq, dummyOrgName, role.Name, name)
+			err = SetOrganizationGroupContext(context.Background(), iq, dummyOrgName, role.Name, name)
 			if err == nil {
 				t.Log("HERE1")
-				err = RevokeOrganizationGroup(iq, dummyOrgName, role.Name, name)
+				err = RevokeOrganizationGroupContext(context.Background(), iq, dummyOrgName, role.Name, name)
 			}
 		}
 		if err == nil {
-			mappings, err = OrganizationAuthorizations(iq, dummyOrgName)
+			mappings, err = OrganizationAuthorizationsContext(context.Background(), iq, dummyOrgName)
 		}
 	case "application":
 		dummyAppName := dummyApps[0].PublicID
 		switch memberType {
 		case MemberTypeUser:
-			err = SetApplicationUser(iq, dummyAppName, role.Name, name)
+			err = SetApplicationUserContext(context.Background(), iq, dummyAppName, role.Name, name)
 			if err == nil {
-				err = RevokeApplicationUser(iq, dummyAppName, role.Name, name)
+				err = RevokeApplicationUserContext(context.Background(), iq, dummyAppName, role.Name, name)
 			}
 		case MemberTypeGroup:
-			err = SetApplicationGroup(iq, dummyAppName, role.Name, name)
+			err = SetApplicationGroupContext(context.Background(), iq, dummyAppName, role.Name, name)
 			if err == nil {
-				err = RevokeApplicationGroup(iq, dummyAppName, role.Name, name)
+				err = RevokeApplicationGroupContext(context.Background(), iq, dummyAppName, role.Name, name)
 			}
 		}
 		if err == nil {
-			mappings, err = ApplicationAuthorizations(iq, dummyAppName)
+			mappings, err = ApplicationAuthorizationsContext(context.Background(), iq, dummyAppName)
 		}
 	case "repository_container":
 		switch memberType {
 		case MemberTypeUser:
-			err = SetRepositoriesUser(iq, role.Name, name)
+			err = SetRepositoriesUserContext(context.Background(), iq, role.Name, name)
 			if err == nil {
-				err = RevokeRepositoriesUser(iq, role.Name, name)
+				err = RevokeRepositoriesUserContext(context.Background(), iq, role.Name, name)
 			}
 		case MemberTypeGroup:
-			err = SetRepositoriesGroup(iq, role.Name, name)
+			err = SetRepositoriesGroupContext(context.Background(), iq, role.Name, name)
 			if err == nil {
-				err = RevokeRepositoriesGroup(iq, role.Name, name)
+				err = RevokeRepositoriesGroupContext(context.Background(), iq, role.Name, name)
 			}
 		}
 		if err == nil {
-			mappings, err = RepositoriesAuthorizations(iq)
+			mappings, err = RepositoriesAuthorizationsContext(context.Background(), iq)
 		}
 	case "global":
 		switch memberType {
 		case MemberTypeUser:
-			err = SetGlobalUser(iq, role.Name, name)
+			err = SetGlobalUserContext(context.Background(), iq, role.Name, name)
 			if err == nil {
-				err = RevokeGlobalUser(iq, role.Name, name)
+				err = RevokeGlobalUserContext(context.Background(), iq, role.Name, name)
 			}
 		case MemberTypeGroup:
-			err = SetGlobalGroup(iq, role.Name, name)
+			err = SetGlobalGroupContext(context.Background(), iq, role.Name, name)
 			if err == nil {
-				err = RevokeGlobalGroup(iq, role.Name, name)
+				err = RevokeGlobalGroupContext(context.Background(), iq, role.Name, name)
 			}
 		}
 		if err == nil {
-			mappings, err = GlobalAuthorizations(iq)
+			mappings, err = GlobalAuthorizationsContext(context.Background(), iq)
 		}
 	}
 	if err != nil {
@@ -732,7 +733,7 @@ func TestRepositoriesAuthorizations(t *testing.T) {
 	iq, mock := roleMembershipsTestIQ(t, false)
 	defer mock.Close()
 
-	got, err := RepositoriesAuthorizations(iq)
+	got, err := RepositoriesAuthorizationsContext(context.Background(), iq)
 	if err != nil {
 		t.Error(err)
 	}
@@ -758,7 +759,7 @@ func TestGetApplicationAuthorizationsByRole(t *testing.T) {
 		}
 	}
 
-	got, err := RepositoriesAuthorizationsByRole(iq, role.Name)
+	got, err := RepositoriesAuthorizationsByRoleContext(context.Background(), iq, role.Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -791,15 +792,15 @@ func testSetRepositories(t *testing.T, memberType string) {
 	var err error
 	switch memberType {
 	case MemberTypeUser:
-		err = SetRepositoriesUser(iq, role.Name, memberName)
+		err = SetRepositoriesUserContext(context.Background(), iq, role.Name, memberName)
 	case MemberTypeGroup:
-		err = SetRepositoriesGroup(iq, role.Name, memberName)
+		err = SetRepositoriesGroupContext(context.Background(), iq, role.Name, memberName)
 	}
 	if err != nil {
 		t.Error(err)
 	}
 
-	got, err := RepositoriesAuthorizations(iq)
+	got, err := RepositoriesAuthorizationsContext(context.Background(), iq)
 	if err != nil {
 		t.Error(err)
 	}
@@ -860,7 +861,7 @@ func testMembersByRole(t *testing.T, iq IQ) {
 			}
 		}
 	}
-	if hasRev70API(iq) {
+	if hasRev70API(context.Background(), iq) {
 		for _, m := range dummyRoleMappingsRepos {
 			if m.RoleID == role.ID {
 				want = append(want, m)
@@ -868,7 +869,7 @@ func testMembersByRole(t *testing.T, iq IQ) {
 		}
 	}
 
-	got, err := MembersByRole(iq, role.Name)
+	got, err := MembersByRoleContext(context.Background(), iq, role.Name)
 	if err != nil {
 		t.Error(err)
 	}
@@ -888,7 +889,7 @@ func TestGlobalAuthorizations(t *testing.T) {
 	iq, mock := roleMembershipsTestIQ(t, false)
 	defer mock.Close()
 
-	got, err := GlobalAuthorizations(iq)
+	got, err := GlobalAuthorizationsContext(context.Background(), iq)
 	if err != nil {
 		t.Error(err)
 	}
@@ -924,15 +925,15 @@ func testSetGlobal(t *testing.T, memberType string) {
 	var err error
 	switch memberType {
 	case MemberTypeUser:
-		err = SetGlobalUser(iq, role.Name, memberName)
+		err = SetGlobalUserContext(context.Background(), iq, role.Name, memberName)
 	case MemberTypeGroup:
-		err = SetGlobalGroup(iq, role.Name, memberName)
+		err = SetGlobalGroupContext(context.Background(), iq, role.Name, memberName)
 	}
 	if err != nil {
 		t.Error(err)
 	}
 
-	got, err := GlobalAuthorizations(iq)
+	got, err := GlobalAuthorizationsContext(context.Background(), iq)
 	if err != nil {
 		t.Error(err)
 	}

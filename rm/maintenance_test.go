@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -50,7 +51,7 @@ func TestCheckDatabase(t *testing.T) {
 
 	db := ComponentDB
 
-	state, err := CheckDatabase(rm, db)
+	state, err := CheckDatabaseContext(context.Background(), rm, db)
 	if err != nil {
 		panic(err)
 	}
@@ -68,7 +69,7 @@ func TestCheckAllDatabases(t *testing.T) {
 	rm, mock := maintenanceTestRM(t)
 	defer mock.Close()
 
-	states, err := CheckAllDatabases(rm)
+	states, err := CheckAllDatabasesContext(context.Background(), rm)
 	if err != nil {
 		panic(err)
 	}

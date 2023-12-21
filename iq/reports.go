@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -124,9 +125,8 @@ type Report struct {
 	Raw    ReportRaw    `json:"rawReport"`
 }
 
-// GetAllReportInfos returns all report infos
-func GetAllReportInfos(iq IQ) ([]ReportInfo, error) {
-	body, _, err := iq.Get(restReports)
+func GetAllReportInfosContext(ctx context.Context, iq IQ) ([]ReportInfo, error) {
+	body, _, err := iq.Get(ctx, restReports)
 	if err != nil {
 		return nil, fmt.Errorf("could not get report info: %v", err)
 	}
@@ -137,9 +137,13 @@ func GetAllReportInfos(iq IQ) ([]ReportInfo, error) {
 	return infos, err
 }
 
-// GetAllReports returns all policy and raw reports
-func GetAllReports(iq IQ) ([]Report, error) {
-	infos, err := GetAllReportInfos(iq)
+// GetAllReportInfos returns all report infos
+func GetAllReportInfos(iq IQ) ([]ReportInfo, error) {
+	return GetAllReportInfosContext(context.Background(), iq)
+}
+
+func GetAllReportsContext(ctx context.Context, iq IQ) ([]Report, error) {
+	infos, err := GetAllReportInfosContext(ctx, iq)
 	if err != nil {
 		return nil, fmt.Errorf("could not get report infos: %v", err)
 	}
@@ -147,8 +151,8 @@ func GetAllReports(iq IQ) ([]Report, error) {
 	reports := make([]Report, 0)
 
 	for _, info := range infos {
-		raw, _ := getRawReportByURL(iq, info.ReportDataURL)
-		policy, _ := getPolicyReportByURL(iq, strings.Replace(info.ReportDataURL, "/raw", "/policy", 1))
+		raw, _ := getRawReportByURL(ctx, iq, info.ReportDataURL)
+		policy, _ := getPolicyReportByURL(ctx, iq, strings.Replace(info.ReportDataURL, "/raw", "/policy", 1))
 
 		raw.ReportInfo = info
 		policy.ReportInfo = info
@@ -163,15 +167,19 @@ func GetAllReports(iq IQ) ([]Report, error) {
 	return reports, err
 }
 
-// GetReportInfosByAppID returns report information by application public ID
-func GetReportInfosByAppID(iq IQ, appID string) (infos []ReportInfo, err error) {
-	app, err := GetApplicationByPublicID(iq, appID)
+// GetAllReports returns all policy and raw reports
+func GetAllReports(iq IQ) ([]Report, error) {
+	return GetAllReportsContext(context.Background(), iq)
+}
+
+func GetReportInfosByAppIDContext(ctx context.Context, iq IQ, appID string) (infos []ReportInfo, err error) {
+	app, err := GetApplicationByPublicIDContext(ctx, iq, appID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get info for application: %v", err)
 	}
 
 	endpoint := fmt.Sprintf("%s/%s", restReports, app.ID)
-	body, _, err := iq.Get(endpoint)
+	body, _, err := iq.Get(ctx, endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("could not get report infos: %v", err)
 	}
@@ -184,9 +192,13 @@ func GetReportInfosByAppID(iq IQ, appID string) (infos []ReportInfo, err error) 
 	return
 }
 
-// GetReportInfoByAppIDStage returns report information by application public ID and stage
-func GetReportInfoByAppIDStage(iq IQ, appID, stage string) (ReportInfo, error) {
-	if infos, err := GetReportInfosByAppID(iq, appID); err == nil {
+// GetReportInfosByAppID returns report information by application public ID
+func GetReportInfosByAppID(iq IQ, appID string) (infos []ReportInfo, err error) {
+	return GetReportInfosByAppIDContext(context.Background(), iq, appID)
+}
+
+func GetReportInfoByAppIDStageContext(ctx context.Context, iq IQ, appID, stage string) (ReportInfo, error) {
+	if infos, err := GetReportInfosByAppIDContext(ctx, iq, appID); err == nil {
 		for _, info := range infos {
 			if info.Stage == stage {
 				return info, nil
@@ -197,8 +209,13 @@ func GetReportInfoByAppIDStage(iq IQ, appID, stage string) (ReportInfo, error) {
 	return ReportInfo{}, fmt.Errorf("did not find report for '%s'", appID)
 }
 
-func getRawReportByURL(iq IQ, URL string) (ReportRaw, error) {
-	body, resp, err := iq.Get(URL)
+// GetReportInfoByAppIDStage returns report information by application public ID and stage
+func GetReportInfoByAppIDStage(iq IQ, appID, stage string) (ReportInfo, error) {
+	return GetReportInfoByAppIDStageContext(context.Background(), iq, appID, stage)
+}
+
+func getRawReportByURL(ctx context.Context, iq IQ, URL string) (ReportRaw, error) {
+	body, resp, err := iq.Get(ctx, URL)
 	if err != nil {
 		log.Printf("error: could not retrieve raw report: %v\n", err)
 		dump, _ := httputil.DumpRequest(resp.Request, true)
@@ -213,20 +230,19 @@ func getRawReportByURL(iq IQ, URL string) (ReportRaw, error) {
 	return report, nil
 }
 
-func getRawReportByAppReportID(iq IQ, appID, reportID string) (ReportRaw, error) {
-	return getRawReportByURL(iq, fmt.Sprintf(restReportsRaw, appID, reportID))
+func getRawReportByAppReportID(ctx context.Context, iq IQ, appID, reportID string) (ReportRaw, error) {
+	return getRawReportByURL(ctx, iq, fmt.Sprintf(restReportsRaw, appID, reportID))
 }
 
-// GetRawReportByAppID returns report information by application public ID
-func GetRawReportByAppID(iq IQ, appID, stage string) (ReportRaw, error) {
-	infos, err := GetReportInfosByAppID(iq, appID)
+func GetRawReportByAppIDContext(ctx context.Context, iq IQ, appID, stage string) (ReportRaw, error) {
+	infos, err := GetReportInfosByAppIDContext(ctx, iq, appID)
 	if err != nil {
 		return ReportRaw{}, fmt.Errorf("could not get report info for app '%s': %v", appID, err)
 	}
 
 	for _, info := range infos {
 		if info.Stage == stage {
-			report, err := getRawReportByURL(iq, info.ReportDataURL)
+			report, err := getRawReportByURL(ctx, iq, info.ReportDataURL)
 			report.ReportInfo = info
 			return report, err
 		}
@@ -235,8 +251,13 @@ func GetRawReportByAppID(iq IQ, appID, stage string) (ReportRaw, error) {
 	return ReportRaw{}, fmt.Errorf("could not find raw report for stage %s", stage)
 }
 
-func getPolicyReportByURL(iq IQ, URL string) (ReportPolicy, error) {
-	body, _, err := iq.Get(URL)
+// GetRawReportByAppID returns report information by application public ID
+func GetRawReportByAppID(iq IQ, appID, stage string) (ReportRaw, error) {
+	return GetRawReportByAppIDContext(context.Background(), iq, appID, stage)
+}
+
+func getPolicyReportByURL(ctx context.Context, iq IQ, URL string) (ReportPolicy, error) {
+	body, _, err := iq.Get(ctx, URL)
 	if err != nil {
 		return ReportPolicy{}, fmt.Errorf("could not get policy report at URL %s: %v", URL, err)
 	}
@@ -248,16 +269,15 @@ func getPolicyReportByURL(iq IQ, URL string) (ReportPolicy, error) {
 	return report, nil
 }
 
-// GetPolicyReportByAppID returns report information by application public ID
-func GetPolicyReportByAppID(iq IQ, appID, stage string) (ReportPolicy, error) {
-	infos, err := GetReportInfosByAppID(iq, appID)
+func GetPolicyReportByAppIDContext(ctx context.Context, iq IQ, appID, stage string) (ReportPolicy, error) {
+	infos, err := GetReportInfosByAppIDContext(ctx, iq, appID)
 	if err != nil {
 		return ReportPolicy{}, fmt.Errorf("could not get report info for app '%s': %v", appID, err)
 	}
 
 	for _, info := range infos {
 		if info.Stage == stage {
-			report, err := getPolicyReportByURL(iq, strings.Replace(infos[0].ReportDataURL, "/raw", "/policy", 1))
+			report, err := getPolicyReportByURL(ctx, iq, strings.Replace(infos[0].ReportDataURL, "/raw", "/policy", 1))
 			report.ReportInfo = info
 			return report, err
 		}
@@ -266,14 +286,18 @@ func GetPolicyReportByAppID(iq IQ, appID, stage string) (ReportPolicy, error) {
 	return ReportPolicy{}, fmt.Errorf("could not find policy report for stage %s", stage)
 }
 
-// GetReportByAppID returns report information by application public ID
-func GetReportByAppID(iq IQ, appID, stage string) (report Report, err error) {
-	report.Policy, err = GetPolicyReportByAppID(iq, appID, stage)
+// GetPolicyReportByAppID returns report information by application public ID
+func GetPolicyReportByAppID(iq IQ, appID, stage string) (ReportPolicy, error) {
+	return GetPolicyReportByAppIDContext(context.Background(), iq, appID, stage)
+}
+
+func GetReportByAppIDContext(ctx context.Context, iq IQ, appID, stage string) (report Report, err error) {
+	report.Policy, err = GetPolicyReportByAppIDContext(ctx, iq, appID, stage)
 	if err != nil {
 		return report, fmt.Errorf("could not retrieve policy report: %v", err)
 	}
 
-	report.Raw, err = GetRawReportByAppID(iq, appID, stage)
+	report.Raw, err = GetRawReportByAppIDContext(ctx, iq, appID, stage)
 	if err != nil {
 		return report, fmt.Errorf("could not retrieve raw report: %v", err)
 	}
@@ -281,19 +305,23 @@ func GetReportByAppID(iq IQ, appID, stage string) (report Report, err error) {
 	return report, nil
 }
 
-// GetReportByAppReportID returns raw and policy report information for a given report ID
-func GetReportByAppReportID(iq IQ, appID, reportID string) (report Report, err error) {
-	report.Policy, err = getPolicyReportByURL(iq, fmt.Sprintf(restReportsPolicy, appID, reportID))
+// GetReportByAppID returns report information by application public ID
+func GetReportByAppID(iq IQ, appID, stage string) (report Report, err error) {
+	return GetReportByAppIDContext(context.Background(), iq, appID, stage)
+}
+
+func GetReportByAppReportIDContext(ctx context.Context, iq IQ, appID, reportID string) (report Report, err error) {
+	report.Policy, err = getPolicyReportByURL(ctx, iq, fmt.Sprintf(restReportsPolicy, appID, reportID))
 	if err != nil {
 		return report, fmt.Errorf("could not retrieve policy report: %v", err)
 	}
 
-	report.Raw, err = getRawReportByURL(iq, fmt.Sprintf(restReportsRaw, appID, reportID))
+	report.Raw, err = getRawReportByURL(ctx, iq, fmt.Sprintf(restReportsRaw, appID, reportID))
 	if err != nil {
 		return report, fmt.Errorf("could not retrieve raw report: %v", err)
 	}
 
-	infos, err := GetReportInfosByAppID(iq, appID)
+	infos, err := GetReportInfosByAppIDContext(ctx, iq, appID)
 	if err != nil {
 		return report, fmt.Errorf("could not retrieve report infos: %v", err)
 	}
@@ -307,16 +335,20 @@ func GetReportByAppReportID(iq IQ, appID, reportID string) (report Report, err e
 	return report, nil
 }
 
-// GetReportInfosByOrganization returns report information by organization name
-func GetReportInfosByOrganization(iq IQ, organizationName string) (infos []ReportInfo, err error) {
-	apps, err := GetApplicationsByOrganization(iq, organizationName)
+// GetReportByAppReportID returns raw and policy report information for a given report ID
+func GetReportByAppReportID(iq IQ, appID, reportID string) (report Report, err error) {
+	return GetReportByAppReportIDContext(context.Background(), iq, appID, reportID)
+}
+
+func GetReportInfosByOrganizationContext(ctx context.Context, iq IQ, organizationName string) (infos []ReportInfo, err error) {
+	apps, err := GetApplicationsByOrganizationContext(ctx, iq, organizationName)
 	if err != nil {
 		return nil, fmt.Errorf("could not get applications for organization '%s': %v", organizationName, err)
 	}
 
 	infos = make([]ReportInfo, 0)
 	for _, app := range apps {
-		if appInfos, err := GetReportInfosByAppID(iq, app.PublicID); err == nil {
+		if appInfos, err := GetReportInfosByAppIDContext(ctx, iq, app.PublicID); err == nil {
 			infos = append(infos, appInfos...)
 		}
 	}
@@ -324,9 +356,13 @@ func GetReportInfosByOrganization(iq IQ, organizationName string) (infos []Repor
 	return infos, nil
 }
 
-// GetReportsByOrganization returns all reports for an given organization
-func GetReportsByOrganization(iq IQ, organizationName string) (reports []Report, err error) {
-	apps, err := GetApplicationsByOrganization(iq, organizationName)
+// GetReportInfosByOrganization returns report information by organization name
+func GetReportInfosByOrganization(iq IQ, organizationName string) (infos []ReportInfo, err error) {
+	return GetReportInfosByOrganizationContext(context.Background(), iq, organizationName)
+}
+
+func GetReportsByOrganizationContext(ctx context.Context, iq IQ, organizationName string) (reports []Report, err error) {
+	apps, err := GetApplicationsByOrganizationContext(ctx, iq, organizationName)
 	if err != nil {
 		return nil, fmt.Errorf("could not get applications for organization '%s': %v", organizationName, err)
 	}
@@ -336,13 +372,18 @@ func GetReportsByOrganization(iq IQ, organizationName string) (reports []Report,
 	reports = make([]Report, 0)
 	for _, app := range apps {
 		for _, s := range stages {
-			if appReport, err := GetReportByAppID(iq, app.PublicID, string(s)); err == nil {
+			if appReport, err := GetReportByAppIDContext(ctx, iq, app.PublicID, string(s)); err == nil {
 				reports = append(reports, appReport)
 			}
 		}
 	}
 
 	return reports, nil
+}
+
+// GetReportsByOrganization returns all reports for an given organization
+func GetReportsByOrganization(iq IQ, organizationName string) (reports []Report, err error) {
+	return GetReportsByOrganizationContext(context.Background(), iq, organizationName)
 }
 
 // ReportDiff encapsulates the differences between reports
@@ -352,16 +393,15 @@ type ReportDiff struct {
 	Fixed   []PolicyReportComponent `json:"fixed,omitempty"`
 }
 
-// ReportsDiff returns a structure describing various differences between two reports
-func ReportsDiff(iq IQ, appID, report1ID, report2ID string) (ReportDiff, error) {
+func ReportsDiffContext(ctx context.Context, iq IQ, appID, report1ID, report2ID string) (ReportDiff, error) {
 	var (
 		report1, report2 Report
 		err              error
 	)
 
-	report1, err = GetReportByAppReportID(iq, appID, report1ID)
+	report1, err = GetReportByAppReportIDContext(ctx, iq, appID, report1ID)
 	if err == nil {
-		report2, err = GetReportByAppReportID(iq, appID, report2ID)
+		report2, err = GetReportByAppReportIDContext(ctx, iq, appID, report2ID)
 	}
 	if err != nil {
 		return ReportDiff{}, fmt.Errorf("could not retrieve raw reports: %v", err)
@@ -413,4 +453,9 @@ func ReportsDiff(iq IQ, appID, report1ID, report2ID string) (ReportDiff, error) 
 	}
 
 	return diff(iq, report2, report1)
+}
+
+// ReportsDiff returns a structure describing various differences between two reports
+func ReportsDiff(iq IQ, appID, report1ID, report2ID string) (ReportDiff, error) {
+	return ReportsDiffContext(context.Background(), iq, appID, report1ID, report2ID)
 }

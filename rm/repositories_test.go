@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -38,7 +39,7 @@ func TestGetRepositories(t *testing.T) {
 	rm, mock := repositoriesTestRM(t)
 	defer mock.Close()
 
-	repos, err := GetRepositories(rm)
+	repos, err := GetRepositoriesContext(context.Background(), rm)
 	if err != nil {
 		t.Error(err)
 	}
@@ -57,7 +58,7 @@ func TestGetRepositoryByName(t *testing.T) {
 
 	dummyRepoIdx := 0
 
-	repo, err := GetRepositoryByName(rm, dummyRepos[dummyRepoIdx].Name)
+	repo, err := GetRepositoryByNameContext(context.Background(), rm, dummyRepos[dummyRepoIdx].Name)
 	if err != nil {
 		t.Error(err)
 	}

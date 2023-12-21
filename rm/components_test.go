@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -168,7 +169,7 @@ func getComponentsTester(t *testing.T, repo string) {
 	rm, mock := componentsTestRM(t)
 	defer mock.Close()
 
-	components, err := GetComponents(rm, repo)
+	components, err := GetComponentsContext(context.Background(), rm, repo)
 	if err != nil {
 		panic(err)
 	}
@@ -200,7 +201,7 @@ func TestGetComponentByID(t *testing.T) {
 
 	expectedComponent := dummyComponents["repo-maven"][0]
 
-	component, err := GetComponentByID(rm, expectedComponent.ID)
+	component, err := GetComponentByIDContext(context.Background(), rm, expectedComponent.ID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -218,13 +219,13 @@ func componentUploader(t *testing.T, expected RepositoryItem, upload UploadCompo
 	defer mock.Close()
 
 	// if err := UploadComponent(rm, expected.Repository, coordinate, file); err != nil {
-	if err := UploadComponent(rm, expected.Repository, upload); err != nil {
+	if err := UploadComponentContext(context.Background(), rm, expected.Repository, upload); err != nil {
 		t.Error(err)
 	}
 
 	expected.ID = dummyNewComponentID
 
-	component, err := GetComponentByID(rm, expected.ID)
+	component, err := GetComponentByIDContext(context.Background(), rm, expected.ID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -314,17 +315,17 @@ func TestDeleteComponentByID(t *testing.T) {
 	}
 
 	// if err = UploadComponent(rm, deleteMe.Repository, coord, nil); err != nil {
-	if err = UploadComponent(rm, deleteMe.Repository, upload); err != nil {
+	if err = UploadComponentContext(context.Background(), rm, deleteMe.Repository, upload); err != nil {
 		t.Error(err)
 	}
 
 	deleteMe.ID = dummyNewComponentID
 
-	if err = DeleteComponentByID(rm, deleteMe.ID); err != nil {
+	if err = DeleteComponentByIDContext(context.Background(), rm, deleteMe.ID); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := GetComponentByID(rm, deleteMe.ID); err == nil {
+	if _, err := GetComponentByIDContext(context.Background(), rm, deleteMe.ID); err == nil {
 		t.Errorf("Component not deleted: %v\n", err)
 	}
 }
@@ -335,7 +336,7 @@ func ExampleGetComponents() {
 		panic(err)
 	}
 
-	items, err := GetComponents(rm, "maven-central")
+	items, err := GetComponentsContext(context.Background(), rm, "maven-central")
 	if err != nil {
 		panic(err)
 	}

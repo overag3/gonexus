@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -130,7 +131,7 @@ func getAssetsTester(t *testing.T, repo string) {
 	rm, mock := assetsTestRM(t)
 	defer mock.Close()
 
-	assets, err := GetAssets(rm, repo)
+	assets, err := GetAssetsContext(context.Background(), rm, repo)
 	if err != nil {
 		panic(err)
 	}
@@ -162,7 +163,7 @@ func TestGetAssetByID(t *testing.T) {
 
 	expectedAsset := dummyAssets["repo-maven"][0]
 
-	asset, err := GetAssetByID(rm, expectedAsset.ID)
+	asset, err := GetAssetByIDContext(context.Background(), rm, expectedAsset.ID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -189,15 +190,15 @@ func TestDeleteAssetByID(t *testing.T) {
 
 	dummyAssets[deleteMe.Repository] = append(dummyAssets[deleteMe.Repository], deleteMe)
 
-	if _, err := GetAssetByID(rm, deleteMe.ID); err != nil {
+	if _, err := GetAssetByIDContext(context.Background(), rm, deleteMe.ID); err != nil {
 		t.Errorf("Error getting component: %v\n", err)
 	}
 
-	if err := DeleteAssetByID(rm, deleteMe.ID); err != nil {
+	if err := DeleteAssetByIDContext(context.Background(), rm, deleteMe.ID); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := GetAssetByID(rm, deleteMe.ID); err == nil {
+	if _, err := GetAssetByIDContext(context.Background(), rm, deleteMe.ID); err == nil {
 		t.Errorf("Asset not deleted: %v\n", err)
 	}
 }

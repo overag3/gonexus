@@ -1,6 +1,7 @@
 package nexus
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -20,12 +21,12 @@ type ServerInfo struct {
 
 // Client is the interface which allows interacting with an IQ server
 type Client interface {
-	NewRequest(method, endpoint string, payload io.Reader) (*http.Request, error)
+	NewRequest(ctx context.Context, method, endpoint string, payload io.Reader) (*http.Request, error)
 	Do(request *http.Request) ([]byte, *http.Response, error)
-	Get(endpoint string) ([]byte, *http.Response, error)
-	Post(endpoint string, payload io.Reader) ([]byte, *http.Response, error)
-	Put(endpoint string, payload io.Reader) ([]byte, *http.Response, error)
-	Del(endpoint string) (*http.Response, error)
+	Get(ctx context.Context, endpoint string) ([]byte, *http.Response, error)
+	Post(ctx context.Context, endpoint string, payload io.Reader) ([]byte, *http.Response, error)
+	Put(ctx context.Context, endpoint string, payload io.Reader) ([]byte, *http.Response, error)
+	Del(ctx context.Context, endpoint string) (*http.Response, error)
 	Info() ServerInfo
 	SetDebug(enable bool)
 	SetCertFile(certFile string)
@@ -38,9 +39,9 @@ type DefaultClient struct {
 }
 
 // NewRequest created an http.Request object based on an endpoint and fills in basic auth
-func (s *DefaultClient) NewRequest(method, endpoint string, payload io.Reader) (request *http.Request, err error) {
+func (s *DefaultClient) NewRequest(ctx context.Context, method, endpoint string, payload io.Reader) (request *http.Request, err error) {
 	url := fmt.Sprintf("%s/%s", s.Host, endpoint)
-	request, err = http.NewRequest(method, url, payload)
+	request, err = http.NewRequestWithContext(ctx, method, url, payload)
 	if err != nil {
 		return
 	}
@@ -104,8 +105,8 @@ func (s *DefaultClient) Do(request *http.Request) (body []byte, resp *http.Respo
 	return
 }
 
-func (s *DefaultClient) http(method, endpoint string, payload io.Reader) ([]byte, *http.Response, error) {
-	request, err := s.NewRequest(method, endpoint, payload)
+func (s *DefaultClient) http(ctx context.Context, method, endpoint string, payload io.Reader) ([]byte, *http.Response, error) {
+	request, err := s.NewRequest(ctx, method, endpoint, payload)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -114,23 +115,23 @@ func (s *DefaultClient) http(method, endpoint string, payload io.Reader) ([]byte
 }
 
 // Get performs an HTTP GET against the indicated endpoint
-func (s *DefaultClient) Get(endpoint string) ([]byte, *http.Response, error) {
-	return s.http(http.MethodGet, endpoint, nil)
+func (s *DefaultClient) Get(ctx context.Context, endpoint string) ([]byte, *http.Response, error) {
+	return s.http(ctx, http.MethodGet, endpoint, nil)
 }
 
 // Post performs an HTTP POST against the indicated endpoint
-func (s *DefaultClient) Post(endpoint string, payload io.Reader) ([]byte, *http.Response, error) {
-	return s.http(http.MethodPost, endpoint, payload)
+func (s *DefaultClient) Post(ctx context.Context, endpoint string, payload io.Reader) ([]byte, *http.Response, error) {
+	return s.http(ctx, http.MethodPost, endpoint, payload)
 }
 
 // Put performs an HTTP PUT against the indicated endpoint
-func (s *DefaultClient) Put(endpoint string, payload io.Reader) ([]byte, *http.Response, error) {
-	return s.http(http.MethodPut, endpoint, payload)
+func (s *DefaultClient) Put(ctx context.Context, endpoint string, payload io.Reader) ([]byte, *http.Response, error) {
+	return s.http(ctx, http.MethodPut, endpoint, payload)
 }
 
 // Del performs an HTTP DELETE against the indicated endpoint
-func (s *DefaultClient) Del(endpoint string) (resp *http.Response, err error) {
-	_, resp, err = s.http(http.MethodDelete, endpoint, nil)
+func (s *DefaultClient) Del(ctx context.Context, endpoint string) (resp *http.Response, err error) {
+	_, resp, err = s.http(ctx, http.MethodDelete, endpoint, nil)
 	return
 }
 

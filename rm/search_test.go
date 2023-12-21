@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -78,7 +79,7 @@ func TestSearchComponents(t *testing.T) {
 	repo := "repo-maven"
 
 	query := NewSearchQueryBuilder().Repository(repo)
-	components, err := SearchComponents(rm, query)
+	components, err := SearchComponentsContext(context.Background(), rm, query)
 	if err != nil {
 		t.Fatalf("Did not complete search: %v", err)
 	}
@@ -103,7 +104,7 @@ func TestSearchAssets(t *testing.T) {
 	repo := "repo-maven"
 
 	query := NewSearchQueryBuilder().Repository(repo)
-	assets, err := SearchAssets(rm, query)
+	assets, err := SearchAssetsContext(context.Background(), rm, query)
 	if err != nil {
 		t.Error(err)
 	}
@@ -128,7 +129,7 @@ func ExampleSearchComponents() {
 	}
 
 	query := NewSearchQueryBuilder().Repository("maven-releases")
-	components, err := SearchComponents(rm, query)
+	components, err := SearchComponentsContext(context.Background(), rm, query)
 	if err != nil {
 		panic(err)
 	}

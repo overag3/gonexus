@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -50,7 +51,7 @@ func TestGetPolicies(t *testing.T) {
 	iq, mock := policiesTestIQ(t)
 	defer mock.Close()
 
-	infos, err := GetPolicies(iq)
+	infos, err := GetPoliciesContext(context.Background(), iq)
 	if err != nil {
 		t.Error(err)
 	}
@@ -72,7 +73,7 @@ func TestGetPolicyInfoByName(t *testing.T) {
 
 	expected := dummyPolicyInfos[0]
 
-	info, err := GetPolicyInfoByName(iq, expected.Name)
+	info, err := GetPolicyInfoByNameContext(context.Background(), iq, expected.Name)
 	if err != nil {
 		t.Error(err)
 	}

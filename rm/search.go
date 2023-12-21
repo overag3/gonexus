@@ -2,6 +2,7 @@ package nexusrm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -104,7 +105,7 @@ func NewSearchQueryBuilder() *SearchQueryBuilder {
 	return b
 }
 
-func search(rm RM, endpoint string, queryBuilder nexus.SearchQueryBuilder, responseHandler func([]byte) (string, error)) error {
+func search(ctx context.Context, rm RM, endpoint string, queryBuilder nexus.SearchQueryBuilder, responseHandler func([]byte) (string, error)) error {
 	continuation := ""
 	queryEndpoint := fmt.Sprintf("%s?%s", endpoint, queryBuilder.Build())
 
@@ -115,7 +116,7 @@ func search(rm RM, endpoint string, queryBuilder nexus.SearchQueryBuilder, respo
 			url += "&continuationToken=" + continuation
 		}
 
-		body, resp, err := rm.Get(url)
+		body, resp, err := rm.Get(ctx, url)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			return
 		}
@@ -142,12 +143,33 @@ func search(rm RM, endpoint string, queryBuilder nexus.SearchQueryBuilder, respo
 	return nil
 }
 
-// SearchComponents allows searching the indicated RM instance for specific components
-func SearchComponents(rm RM, query nexus.SearchQueryBuilder) ([]RepositoryItem, error) {
+func SearchComponentsContext(ctx context.Context, rm RM, query nexus.SearchQueryBuilder) ([]RepositoryItem, error) {
 	items := make([]RepositoryItem, 0)
 
-	err := search(rm, restSearchComponents, query, func(body []byte) (string, error) {
+	err := search(ctx, rm, restSearchComponents, query, func(body []byte) (string, error) {
 		var resp searchComponentsResponse
+		if er := json.Unmarshal(body, &resp); er != nil {
+			return "", er
+		}
+
+		items = append(items, resp.Items...)
+
+		return resp.ContinuationToken, nil
+	})
+
+	return items, err
+}
+
+// SearchComponents allows searching the indicated RM instance for specific components
+func SearchComponents(rm RM, query nexus.SearchQueryBuilder) ([]RepositoryItem, error) {
+	return SearchComponentsContext(context.Background(), rm, query)
+}
+
+func SearchAssetsContext(ctx context.Context, rm RM, query nexus.SearchQueryBuilder) ([]RepositoryItemAsset, error) {
+	items := make([]RepositoryItemAsset, 0)
+
+	err := search(ctx, rm, restSearchAssets, query, func(body []byte) (string, error) {
+		var resp searchAssetsResponse
 		if er := json.Unmarshal(body, &resp); er != nil {
 			return "", er
 		}
@@ -162,18 +184,5 @@ func SearchComponents(rm RM, query nexus.SearchQueryBuilder) ([]RepositoryItem, 
 
 // SearchAssets allows searching the indicated RM instance for specific assets
 func SearchAssets(rm RM, query nexus.SearchQueryBuilder) ([]RepositoryItemAsset, error) {
-	items := make([]RepositoryItemAsset, 0)
-
-	err := search(rm, restSearchAssets, query, func(body []byte) (string, error) {
-		var resp searchAssetsResponse
-		if er := json.Unmarshal(body, &resp); er != nil {
-			return "", er
-		}
-
-		items = append(items, resp.Items...)
-
-		return resp.ContinuationToken, nil
-	})
-
-	return items, err
+	return SearchAssetsContext(context.Background(), rm, query)
 }

@@ -2,6 +2,7 @@ package nexusiq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -42,17 +43,20 @@ type ComponentDetail struct {
 	} `json:"securityData"`
 }
 
-// GetComponent returns information on a named component
-func GetComponent(iq IQ, component Component) (ComponentDetail, error) {
-	deets, err := GetComponents(iq, []Component{component})
+func GetComponentContext(ctx context.Context, iq IQ, component Component) (ComponentDetail, error) {
+	deets, err := GetComponentsContext(ctx, iq, []Component{component})
 	if deets == nil || len(deets) == 0 {
 		return ComponentDetail{}, err
 	}
 	return deets[0], err
 }
 
-// GetComponents returns information on the named components
-func GetComponents(iq IQ, components []Component) ([]ComponentDetail, error) {
+// GetComponent returns information on a named component
+func GetComponent(iq IQ, component Component) (ComponentDetail, error) {
+	return GetComponentContext(context.Background(), iq, component)
+}
+
+func GetComponentsContext(ctx context.Context, iq IQ, components []Component) ([]ComponentDetail, error) {
 	reqComponents := detailsRequest{Components: make([]componentRequested, len(components))}
 	for i, c := range components {
 		reqComponents.Components[i] = componentRequestedFromComponent(c)
@@ -63,7 +67,7 @@ func GetComponents(iq IQ, components []Component) ([]ComponentDetail, error) {
 		return nil, fmt.Errorf("could not generate request: %v", err)
 	}
 
-	body, _, err := iq.Post(restComponentDetails, bytes.NewBuffer(req))
+	body, _, err := iq.Post(ctx, restComponentDetails, bytes.NewBuffer(req))
 	if err != nil {
 		return nil, fmt.Errorf("could not find component details: %v", err)
 	}
@@ -76,13 +80,17 @@ func GetComponents(iq IQ, components []Component) ([]ComponentDetail, error) {
 	return resp.ComponentDetails, nil
 }
 
-// GetComponentsByApplication returns an array with all components along with their
-func GetComponentsByApplication(iq IQ, appPublicID string) ([]ComponentDetail, error) {
+// GetComponents returns information on the named components
+func GetComponents(iq IQ, components []Component) ([]ComponentDetail, error) {
+	return GetComponentsContext(context.Background(), iq, components)
+}
+
+func GetComponentsByApplicationContext(ctx context.Context, iq IQ, appPublicID string) ([]ComponentDetail, error) {
 	componentHashes := make(map[string]struct{})
 	components := make([]Component, 0)
 	stages := []Stage{StageBuild, StageStageRelease, StageRelease, StageOperate}
 	for _, stage := range stages {
-		if report, err := GetRawReportByAppID(iq, appPublicID, string(stage)); err == nil {
+		if report, err := GetRawReportByAppIDContext(ctx, iq, appPublicID, string(stage)); err == nil {
 			for _, c := range report.Components {
 				if _, ok := componentHashes[c.Hash]; !ok {
 					componentHashes[c.Hash] = struct{}{}
@@ -92,12 +100,16 @@ func GetComponentsByApplication(iq IQ, appPublicID string) ([]ComponentDetail, e
 		}
 	}
 
-	return GetComponents(iq, components)
+	return GetComponentsContext(ctx, iq, components)
 }
 
-// GetAllComponents returns an array with all components along with their
-func GetAllComponents(iq IQ) ([]ComponentDetail, error) {
-	apps, err := GetAllApplications(iq)
+// GetComponentsByApplication returns an array with all components along with their
+func GetComponentsByApplication(iq IQ, appPublicID string) ([]ComponentDetail, error) {
+	return GetComponentsByApplicationContext(context.Background(), iq, appPublicID)
+}
+
+func GetAllComponentsContext(ctx context.Context, iq IQ) ([]ComponentDetail, error) {
+	apps, err := GetAllApplicationsContext(ctx, iq)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +118,7 @@ func GetAllComponents(iq IQ) ([]ComponentDetail, error) {
 	components := make([]ComponentDetail, 0)
 
 	for _, app := range apps {
-		appComponents, err := GetComponentsByApplication(iq, app.PublicID)
+		appComponents, err := GetComponentsByApplicationContext(ctx, iq, app.PublicID)
 		// TODO: catcher
 		if err != nil {
 			return nil, err
@@ -121,4 +133,9 @@ func GetAllComponents(iq IQ) ([]ComponentDetail, error) {
 	}
 
 	return components, nil
+}
+
+// GetAllComponents returns an array with all components
+func GetAllComponents(iq IQ) ([]ComponentDetail, error) {
+	return GetAllComponentsContext(context.Background(), iq)
 }

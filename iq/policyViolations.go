@@ -2,6 +2,7 @@ package nexusiq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -18,9 +19,8 @@ type violationResponse struct {
 	ApplicationViolations []ApplicationViolation `json:"applicationViolations"`
 }
 
-// GetAllPolicyViolations returns all policy violations
-func GetAllPolicyViolations(iq IQ) ([]ApplicationViolation, error) {
-	policyInfos, err := GetPolicies(iq)
+func GetAllPolicyViolationsContext(ctx context.Context, iq IQ) ([]ApplicationViolation, error) {
+	policyInfos, err := GetPoliciesContext(ctx, iq)
 	if err != nil {
 		return nil, fmt.Errorf("could not get policies: %v", err)
 	}
@@ -33,7 +33,7 @@ func GetAllPolicyViolations(iq IQ) ([]ApplicationViolation, error) {
 		endpoint.WriteString(i.ID)
 	}
 
-	body, _, err := iq.Get(endpoint.String())
+	body, _, err := iq.Get(ctx, endpoint.String())
 	if err != nil {
 		return nil, fmt.Errorf("could not get policy violations: %v", err)
 	}
@@ -47,9 +47,13 @@ func GetAllPolicyViolations(iq IQ) ([]ApplicationViolation, error) {
 	return resp.ApplicationViolations, nil
 }
 
-// GetPolicyViolationsByName returns the policy violations by policy name
-func GetPolicyViolationsByName(iq IQ, policyNames ...string) ([]ApplicationViolation, error) {
-	policies, err := GetPolicies(iq)
+// GetAllPolicyViolations returns all policy violations
+func GetAllPolicyViolations(iq IQ) ([]ApplicationViolation, error) {
+	return GetAllPolicyViolationsContext(context.Background(), iq)
+}
+
+func GetPolicyViolationsByNameContext(ctx context.Context, iq IQ, policyNames ...string) ([]ApplicationViolation, error) {
+	policies, err := GetPoliciesContext(ctx, iq)
 	if err != nil {
 		return nil, fmt.Errorf("did not find policy: %v", err)
 	}
@@ -67,7 +71,7 @@ func GetPolicyViolationsByName(iq IQ, policyNames ...string) ([]ApplicationViola
 		}
 	}
 
-	body, _, err := iq.Get(endpoint.String())
+	body, _, err := iq.Get(ctx, endpoint.String())
 	if err != nil {
 		return nil, fmt.Errorf("could not get policy violations: %v", err)
 	}
@@ -79,4 +83,9 @@ func GetPolicyViolationsByName(iq IQ, policyNames ...string) ([]ApplicationViola
 	}
 
 	return resp.ApplicationViolations, nil
+}
+
+// GetPolicyViolationsByName returns the policy violations by policy name
+func GetPolicyViolationsByName(iq IQ, policyNames ...string) ([]ApplicationViolation, error) {
+	return GetPolicyViolationsByNameContext(context.Background(), iq, policyNames...)
 }

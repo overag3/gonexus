@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -109,7 +110,7 @@ func TestGetAllApplications(t *testing.T) {
 	iq, mock := applicationTestIQ(t)
 	defer mock.Close()
 
-	applications, err := GetAllApplications(iq)
+	applications, err := GetAllApplicationsContext(context.Background(), iq)
 	if err != nil {
 		t.Error(err)
 	}
@@ -133,7 +134,7 @@ func TestGetApplicationByPublicID(t *testing.T) {
 
 	dummyAppsIdx := 2
 
-	got, err := GetApplicationByPublicID(iq, dummyApps[dummyAppsIdx].PublicID)
+	got, err := GetApplicationByPublicIDContext(context.Background(), iq, dummyApps[dummyAppsIdx].PublicID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -197,7 +198,7 @@ func TestCreateApplication(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CreateApplication(tt.args.iq, tt.args.name, tt.args.id, tt.args.organizationID)
+			got, err := CreateApplicationContext(context.Background(), tt.args.iq, tt.args.name, tt.args.id, tt.args.organizationID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CreateApplication() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -216,16 +217,16 @@ func TestDeleteApplication(t *testing.T) {
 	deleteMeApp := Application{PublicID: "deleteMeApp", Name: "deleteMeApp", OrganizationID: "deleteMeAppOrgId"}
 
 	var err error
-	deleteMeApp.ID, err = CreateApplication(iq, deleteMeApp.Name, deleteMeApp.PublicID, deleteMeApp.OrganizationID)
+	deleteMeApp.ID, err = CreateApplicationContext(context.Background(), iq, deleteMeApp.Name, deleteMeApp.PublicID, deleteMeApp.OrganizationID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := DeleteApplication(iq, deleteMeApp.PublicID); err != nil {
+	if err := DeleteApplicationContext(context.Background(), iq, deleteMeApp.PublicID); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := GetApplicationByPublicID(iq, deleteMeApp.PublicID); err == nil {
+	if _, err := GetApplicationByPublicIDContext(context.Background(), iq, deleteMeApp.PublicID); err == nil {
 		t.Fatal("App was not deleted")
 	}
 }
@@ -254,7 +255,7 @@ func TestGetApplicationsByOrganization(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetApplicationsByOrganization(tt.args.iq, tt.args.organizationName)
+			got, err := GetApplicationsByOrganizationContext(context.Background(), tt.args.iq, tt.args.organizationName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetApplicationsByOrganization() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -272,7 +273,7 @@ func ExampleGetAllApplications() {
 		panic(err)
 	}
 
-	applications, err := GetAllApplications(iq)
+	applications, err := GetAllApplicationsContext(context.Background(), iq)
 	if err != nil {
 		panic(err)
 	}
@@ -286,7 +287,7 @@ func ExampleCreateApplication() {
 		panic(err)
 	}
 
-	appID, err := CreateApplication(iq, "name", "id", "organization")
+	appID, err := CreateApplicationContext(context.Background(), iq, "name", "id", "organization")
 	if err != nil {
 		panic(err)
 	}

@@ -2,6 +2,7 @@ package nexusiq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -230,15 +231,14 @@ type iqEvaluationRequest struct {
 	Components []Component `json:"components"`
 }
 
-// EvaluateComponents evaluates the list of components
-func EvaluateComponents(iq IQ, components []Component, applicationID string) (*Evaluation, error) {
+func EvaluateComponentsContext(ctx context.Context, iq IQ, components []Component, applicationID string) (*Evaluation, error) {
 	request, err := json.Marshal(iqEvaluationRequest{Components: components})
 	if err != nil {
 		return nil, fmt.Errorf("could not build the request: %v", err)
 	}
 
 	requestEndpoint := fmt.Sprintf(restEvaluation, applicationID)
-	body, _, err := iq.Post(requestEndpoint, bytes.NewBuffer(request))
+	body, _, err := iq.Post(ctx, requestEndpoint, bytes.NewBuffer(request))
 	if err != nil {
 		return nil, fmt.Errorf("components not evaluated: %v", err)
 	}
@@ -249,7 +249,7 @@ func EvaluateComponents(iq IQ, components []Component, applicationID string) (*E
 	}
 
 	getEvaluationResults := func() (*Evaluation, error) {
-		body, resp, e := iq.Get(results.ResultsURL)
+		body, resp, e := iq.Get(ctx, results.ResultsURL)
 		if e != nil {
 			if resp.StatusCode != http.StatusNotFound {
 				return nil, fmt.Errorf("could not retrieve evaluation results: %v", err)
@@ -279,4 +279,9 @@ func EvaluateComponents(iq IQ, components []Component, applicationID string) (*E
 			return nil, errors.New("timed out waiting for valid evaluation results")
 		}
 	}
+}
+
+// EvaluateComponents evaluates the list of components
+func EvaluateComponents(iq IQ, components []Component, applicationID string) (*Evaluation, error) {
+	return EvaluateComponentsContext(context.Background(), iq, components, applicationID)
 }

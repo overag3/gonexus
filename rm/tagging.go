@@ -2,6 +2,7 @@ package nexusrm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -35,8 +36,7 @@ type componentsAssociated struct {
 	Version string `json:"version"`
 }
 
-// TagsList returns a list of tags in the given RM instance
-func TagsList(rm RM) ([]Tag, error) {
+func TagsListContext(ctx context.Context, rm RM) ([]Tag, error) {
 	continuation := ""
 	tags := make([]Tag, 0)
 
@@ -47,7 +47,7 @@ func TagsList(rm RM) ([]Tag, error) {
 			url += "&continuationToken=" + continuation
 		}
 
-		body, _, err := rm.Get(url)
+		body, _, err := rm.Get(ctx, url)
 		if err != nil {
 			return fmt.Errorf("could not get list of tags: %v", err)
 		}
@@ -76,8 +76,12 @@ func TagsList(rm RM) ([]Tag, error) {
 	return tags, nil
 }
 
-// AddTag adds a tag to the given instance
-func AddTag(rm RM, tagName string, attributes map[string]string) (Tag, error) {
+// TagsList returns a list of tags in the given RM instance
+func TagsList(rm RM) ([]Tag, error) {
+	return TagsListContext(context.Background(), rm)
+}
+
+func AddTagContext(ctx context.Context, rm RM, tagName string, attributes map[string]string) (Tag, error) {
 	tag := Tag{Name: tagName}
 	//TODO: attributes
 
@@ -86,7 +90,7 @@ func AddTag(rm RM, tagName string, attributes map[string]string) (Tag, error) {
 		return Tag{}, fmt.Errorf("could not marshal tag: %v", err)
 	}
 
-	body, _, err := rm.Post(restTagging, bytes.NewBuffer(buf))
+	body, _, err := rm.Post(ctx, restTagging, bytes.NewBuffer(buf))
 	if err != nil {
 		return Tag{}, fmt.Errorf("could not create tag %s: %v", tagName, err)
 	}
@@ -99,11 +103,15 @@ func AddTag(rm RM, tagName string, attributes map[string]string) (Tag, error) {
 	return createdTag, nil
 }
 
-// GetTag retrieve the named tag
-func GetTag(rm RM, tagName string) (Tag, error) {
+// AddTag adds a tag to the given instance
+func AddTag(rm RM, tagName string, attributes map[string]string) (Tag, error) {
+	return AddTagContext(context.Background(), rm, tagName, attributes)
+}
+
+func GetTagContext(ctx context.Context, rm RM, tagName string) (Tag, error) {
 	endpoint := fmt.Sprintf("%s/%s", restTagging, tagName)
 
-	body, _, err := rm.Get(endpoint)
+	body, _, err := rm.Get(ctx, endpoint)
 	if err != nil {
 		return Tag{}, fmt.Errorf("could not find tag %s: %v", tagName, err)
 	}
@@ -116,19 +124,32 @@ func GetTag(rm RM, tagName string) (Tag, error) {
 	return tag, nil
 }
 
-// AssociateTag associates a tag to any component which matches the search criteria
-func AssociateTag(rm RM, query QueryBuilder) error {
+// GetTag retrieve the named tag
+func GetTag(rm RM, tagName string) (Tag, error) {
+	return GetTagContext(context.Background(), rm, tagName)
+}
+
+func AssociateTagContext(ctx context.Context, rm RM, query QueryBuilder) error {
 	endpoint := fmt.Sprintf("%s?%s", restTagging, query.Build())
 
 	// TODO: handle response
-	_, _, err := rm.Post(endpoint, nil)
+	_, _, err := rm.Post(ctx, endpoint, nil)
+	return err
+}
+
+// AssociateTag associates a tag to any component which matches the search criteria
+func AssociateTag(rm RM, query QueryBuilder) error {
+	return AssociateTagContext(context.Background(), rm, query)
+}
+
+func DisassociateTagContext(ctx context.Context, rm RM, query QueryBuilder) error {
+	endpoint := fmt.Sprintf("%s?%s", restTagging, query.Build())
+
+	_, err := rm.Del(ctx, endpoint)
 	return err
 }
 
 // DisassociateTag associates a tag to any component which matches the search criteria
 func DisassociateTag(rm RM, query QueryBuilder) error {
-	endpoint := fmt.Sprintf("%s?%s", restTagging, query.Build())
-
-	_, err := rm.Del(endpoint)
-	return err
+	return DisassociateTagContext(context.Background(), rm, query)
 }

@@ -1,6 +1,7 @@
 package nexusrm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,8 +32,7 @@ type listAssetsResponse struct {
 	ContinuationToken string                `json:"continuationToken"`
 }
 
-// GetAssets returns a list of assets in the indicated repository
-func GetAssets(rm RM, repo string) (items []RepositoryItemAsset, err error) {
+func GetAssetsContext(ctx context.Context, rm RM, repo string) (items []RepositoryItemAsset, err error) {
 	continuation := ""
 
 	get := func() (listResp listAssetsResponse, err error) {
@@ -42,7 +42,7 @@ func GetAssets(rm RM, repo string) (items []RepositoryItemAsset, err error) {
 			url += "&continuationToken=" + continuation
 		}
 
-		body, resp, err := rm.Get(url)
+		body, resp, err := rm.Get(ctx, url)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			return
 		}
@@ -71,8 +71,12 @@ func GetAssets(rm RM, repo string) (items []RepositoryItemAsset, err error) {
 	return items, nil
 }
 
-// GetAssetByID returns an asset by ID
-func GetAssetByID(rm RM, id string) (items RepositoryItemAsset, err error) {
+// GetAssets returns a list of assets in the indicated repository
+func GetAssets(rm RM, repo string) (items []RepositoryItemAsset, err error) {
+	return GetAssetsContext(context.Background(), rm, repo)
+}
+
+func GetAssetByIDContext(ctx context.Context, rm RM, id string) (items RepositoryItemAsset, err error) {
 	doError := func(err error) error {
 		return fmt.Errorf("no asset with id '%s': %v", id, err)
 	}
@@ -80,7 +84,7 @@ func GetAssetByID(rm RM, id string) (items RepositoryItemAsset, err error) {
 	var item RepositoryItemAsset
 
 	url := fmt.Sprintf("%s/%s", restAssets, id)
-	body, resp, err := rm.Get(url)
+	body, resp, err := rm.Get(ctx, url)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return item, doError(err)
 	}
@@ -92,13 +96,22 @@ func GetAssetByID(rm RM, id string) (items RepositoryItemAsset, err error) {
 	return item, nil
 }
 
-// DeleteAssetByID deletes the asset indicated by ID
-func DeleteAssetByID(rm RM, id string) error {
+// GetAssetByID returns an asset by ID
+func GetAssetByID(rm RM, id string) (items RepositoryItemAsset, err error) {
+	return GetAssetByIDContext(context.Background(), rm, id)
+}
+
+func DeleteAssetByIDContext(ctx context.Context, rm RM, id string) error {
 	url := fmt.Sprintf("%s/%s", restAssets, id)
 
-	if resp, err := rm.Del(url); err != nil && resp.StatusCode != http.StatusNoContent {
+	if resp, err := rm.Del(ctx, url); err != nil && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("asset not deleted '%s': %v", id, err)
 	}
 
 	return nil
+}
+
+// DeleteAssetByID deletes the asset indicated by ID
+func DeleteAssetByID(rm RM, id string) error {
+	return DeleteAssetByIDContext(context.Background(), rm, id)
 }

@@ -1,6 +1,7 @@
 package nexusiq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -62,7 +63,7 @@ func TestComponentVersions(t *testing.T) {
 	iq, mock := componentVersionsTestIQ(t)
 	defer mock.Close()
 
-	versions, err := ComponentVersions(iq, dummyComponent)
+	versions, err := ComponentVersionsContext(context.Background(), iq, dummyComponent)
 	if err != nil {
 		t.Error(err)
 	}
